@@ -1,5 +1,6 @@
 using MetahookInstaller;
 using MetahookInstaller.CLI;
+using System.Text.Json;
 
 CommandLineOptions options;
 try
@@ -23,6 +24,19 @@ try
 {
     var steamLibrary = new SteamLibrary();
     var target = options.ResolveTarget(steamLibrary.FindGameDirectory);
+    if (options.DescribeTarget)
+    {
+        var gameDirectory = Path.GetFullPath(target.GameDirectory);
+        var launcherPath = MetahookSetup.DescribeLauncherPath(gameDirectory, target.ModDirectory);
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            GameDirectory = gameDirectory,
+            target.ModDirectory,
+            LauncherPath = launcherPath,
+        }));
+        return 0;
+    }
+
     var shortcutDirectory = Path.GetFullPath(".");
 
     if (options.Uninstall)
@@ -47,7 +61,7 @@ try
     var source = InstallPayload.FindApplicationSourceDirectory()
         ?? throw new DirectoryNotFoundException(
             "The install/output folder cannot be located next to MetahookInstallerCLI.exe. Please extract the complete archive before running the programme.");
-    var launcher = MetahookSetup.Install(source, target.GameDirectory, target.ModDirectory);
+    var launcher = MetahookSetup.Install(source, target.GameDirectory, target.ModDirectory, options.IncludeDebugSymbols);
     var shortcut = MetahookSetup.CreateShortcut(shortcutDirectory, target.GameName, launcher,
         target.GameDirectory, target.ModDirectory);
     Console.WriteLine($"Installed MetaHook for {target.GameName}: {Path.Combine(target.GameDirectory, target.ModDirectory)}");

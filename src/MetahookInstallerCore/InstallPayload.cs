@@ -32,8 +32,15 @@ public static class InstallPayload
         return null;
     }
 
+    public static string GetLauncherPath(string gameDirectory, string modDirectory, bool isNonBlobEngine)
+    {
+        var isSvenCoop = modDirectory.Equals("svencoop", StringComparison.OrdinalIgnoreCase);
+        return Path.Combine(gameDirectory,
+            isNonBlobEngine ? (isSvenCoop ? "svencoop.exe" : "MetaHook.exe") : "MetaHook_blob.exe");
+    }
+
     public static string Install(string source, string gameDirectory, string modDirectory,
-        bool isNonBlobEngine, bool needsSdl)
+        bool isNonBlobEngine, bool needsSdl, bool includeDebugSymbols = false)
     {
         var normalLauncher = Path.Combine(source, "MetaHook.exe");
         isNonBlobEngine = isNonBlobEngine && File.Exists(normalLauncher);
@@ -42,8 +49,7 @@ public static class InstallPayload
             throw new FileNotFoundException("Could not find the required MetaHook launcher.", sourceLauncher);
 
         var isSvenCoop = modDirectory.Equals("svencoop", StringComparison.OrdinalIgnoreCase);
-        var targetLauncher = Path.Combine(gameDirectory,
-            isNonBlobEngine ? (isSvenCoop ? "svencoop.exe" : "MetaHook.exe") : "MetaHook_blob.exe");
+        var targetLauncher = GetLauncherPath(gameDirectory, modDirectory, isNonBlobEngine);
         var commonResources = Path.Combine(source, "svencoop");
         if (Directory.Exists(commonResources))
             CopyDirectory(commonResources, Path.Combine(gameDirectory, modDirectory));
@@ -70,6 +76,13 @@ public static class InstallPayload
                 name.Equals("SDL3.dll", StringComparison.OrdinalIgnoreCase);
             if (!isSdl || (isNonBlobEngine && needsSdl))
                 File.Copy(file, Path.Combine(gameDirectory, name), true);
+        }
+
+        if (includeDebugSymbols)
+        {
+            foreach (var file in Directory.GetFiles(source).Where(file =>
+                Path.GetExtension(file).Equals(".pdb", StringComparison.OrdinalIgnoreCase)))
+                File.Copy(file, Path.Combine(gameDirectory, Path.GetFileName(file)), true);
         }
 
         var configs = Path.Combine(gameDirectory, modDirectory, "metahook", "configs");

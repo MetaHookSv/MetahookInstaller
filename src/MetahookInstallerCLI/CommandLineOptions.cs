@@ -10,14 +10,18 @@ public sealed record CommandLineOptions(
     string? GameDirectory,
     string? ModDirectory,
     bool Uninstall,
-    bool ShowHelp)
+    bool ShowHelp,
+    bool DescribeTarget = false,
+    bool IncludeDebugSymbols = false)
 {
     public const string Usage =
-        "Usage: MetahookInstallerCLI -appid <appid> [-gamedir <gamedir>] [-moddir <moddir>] [-uninstall]\n" +
+        "Usage: MetahookInstallerCLI -appid <appid> [-gamedir <gamedir>] [-moddir <moddir>] [-uninstall | -describe-target | -include-debug-symbols]\n" +
         "  -appid <appid>      Steam app ID of the game, e.g. 225840 (Sven Co-op) or 70 (Half-Life).\n" +
         "  -gamedir <gamedir>  Game root directory. Defaults to the Steam install directory of the app.\n" +
         "  -moddir <moddir>    Mod directory under the game root. Defaults to the app's base mod.\n" +
         "  -uninstall          Remove MetaHook instead of installing it.\n" +
+        "  -describe-target    Print target JSON without installing (assumes both launchers in payload).\n" +
+        "  -include-debug-symbols  Also install root PDB files.\n" +
         "  -help               Show this help.";
 
     private static readonly HashSet<string> ValueKeys = new(StringComparer.OrdinalIgnoreCase)
@@ -34,6 +38,8 @@ public sealed record CommandLineOptions(
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var uninstall = false;
+        var describeTarget = false;
+        var includeDebugSymbols = false;
         for (var i = 0; i < args.Length; i++)
         {
             var arg = args[i];
@@ -51,6 +57,18 @@ public sealed record CommandLineOptions(
             if (key.Equals("uninstall", StringComparison.OrdinalIgnoreCase))
             {
                 uninstall = true;
+                continue;
+            }
+
+            if (key.Equals("describe-target", StringComparison.OrdinalIgnoreCase))
+            {
+                describeTarget = true;
+                continue;
+            }
+
+            if (key.Equals("include-debug-symbols", StringComparison.OrdinalIgnoreCase))
+            {
+                includeDebugSymbols = true;
                 continue;
             }
 
@@ -77,12 +95,17 @@ public sealed record CommandLineOptions(
             throw new ArgumentException($"Invalid app ID '{appIdText}'.");
         }
 
+        if ((uninstall && (describeTarget || includeDebugSymbols)) || (describeTarget && includeDebugSymbols))
+            throw new ArgumentException("-uninstall, -describe-target and -include-debug-symbols cannot be combined.");
+
         return new CommandLineOptions(
             appId,
             values.GetValueOrDefault("gamedir"),
             values.GetValueOrDefault("moddir"),
             uninstall,
-            false);
+            false,
+            describeTarget,
+            includeDebugSymbols);
     }
 
     // findGameDirectory is only queried when -gamedir is omitted.

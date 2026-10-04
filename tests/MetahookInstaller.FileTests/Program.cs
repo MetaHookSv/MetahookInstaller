@@ -3,6 +3,71 @@ using MetahookInstaller.CLI;
 
 var cases = new (string Name, Action<Fixture> Run)[]
 {
+    ("Describe target selects the same launcher without changing the game", fixture =>
+    {
+        foreach (var mod in new[] { "svencoop", "valve" })
+        {
+            var game = fixture.Game(mod);
+            fixture.NormalEngine();
+            var expected = fixture.Path("game/" + (mod == "svencoop" ? "svencoop.exe" : "MetaHook.exe"));
+            Equal(expected, MetahookSetup.DescribeLauncherPath(game, mod));
+            Absent(expected);
+            Absent(fixture.Path($"game/{mod}/metahook"));
+            File.Delete(fixture.Path("game/hw.dll"));
+            Equal(fixture.Path("game/MetaHook_blob.exe"), MetahookSetup.DescribeLauncherPath(game, mod));
+        }
+        Throws<InvalidOperationException>(() => MetahookSetup.DescribeLauncherPath(fixture.Path("game"), "missing"));
+    }),
+    ("Debug symbols are opt-in and retain their names when the launcher is renamed", fixture =>
+    {
+        var source = fixture.Payload();
+        var game = fixture.Game("svencoop");
+        fixture.NormalEngine();
+        fixture.Write("package/install/output/MetaHook_blob.pdb", "blob symbols");
+        fixture.Write("package/install/output/runtime.PDB", "runtime symbols");
+        Equal(fixture.Path("game/svencoop.exe"), MetahookSetup.Install(source, game, "svencoop", includeDebugSymbols: true));
+        Equal("symbols", File.ReadAllText(fixture.Path("game/MetaHook.pdb")));
+        Equal("blob symbols", File.ReadAllText(fixture.Path("game/MetaHook_blob.pdb")));
+        Equal("runtime symbols", File.ReadAllText(fixture.Path("game/runtime.PDB")));
+        Absent(fixture.Path("game/svencoop.pdb"));
+    }),
+    ("CLI accepts describe and debug symbols and rejects conflicting modes", _ =>
+    {
+        Equal(true, CommandLineOptions.Parse(["-appid", "70", "-DESCRIBE-TARGET"]).DescribeTarget);
+        Equal(true, CommandLineOptions.Parse(["-appid", "70", "-include-debug-symbols"]).IncludeDebugSymbols);
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "70", "-describe-target", "-uninstall"]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "70", "-include-debug-symbols", "-uninstall"]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "70", "-describe-target", "-include-debug-symbols"]));
+    }),
+    ("CLI describe emits JSON without a payload or filesystem side effects", fixture =>
+    {
+        var game = fixture.Game("svencoop");
+        fixture.NormalEngine();
+        var workingDirectory = fixture.Directory("empty working directory");
+        var start = new System.Diagnostics.ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = workingDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (var argument in new[] { typeof(CommandLineOptions).Assembly.Location,
+            "-appid", "225840", "-gamedir", game, "-describe-target" })
+            start.ArgumentList.Add(argument);
+        using var process = System.Diagnostics.Process.Start(start)!;
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
+        process.WaitForExit();
+        Equal("", error.GetAwaiter().GetResult());
+        Equal(0, process.ExitCode);
+        using var json = System.Text.Json.JsonDocument.Parse(output.GetAwaiter().GetResult());
+        Equal(game, json.RootElement.GetProperty("GameDirectory").GetString());
+        Equal("svencoop", json.RootElement.GetProperty("ModDirectory").GetString());
+        Equal(fixture.Path("game/svencoop.exe"), json.RootElement.GetProperty("LauncherPath").GetString());
+        Equal(0, System.IO.Directory.GetFileSystemEntries(workingDirectory).Length);
+        Absent(fixture.Path("game/svencoop.exe"));
+        Absent(fixture.Path("game/svencoop/metahook"));
+    }),
     ("Source is relative to the application, independent of the working directory", fixture =>
     {
         var source = fixture.Payload();
@@ -290,6 +355,17 @@ sealed class Fixture : IDisposable
     {
         Write($"game/{mod}/liblist.gam", "fixture");
         return Path("game");
+    }
+    public void NormalEngine()
+    {
+        // Minimal PE signature sufficient for the installer's engine classifier.
+        var bytes = new byte[128];
+        bytes[0] = (byte)'M';
+        bytes[1] = (byte)'Z';
+        bytes[0x3c] = 64;
+        bytes[64] = (byte)'P';
+        bytes[65] = (byte)'E';
+        File.WriteAllBytes(Path("game/hw.dll"), bytes);
     }
     public string Payload(bool normal = true, bool blob = true)
     {

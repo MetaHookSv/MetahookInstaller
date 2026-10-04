@@ -73,7 +73,18 @@ Arguments (case-insensitive):
 - `-gamedir <gamedir>`: optional game root directory. Defaults to the app's Steam install directory.
 - `-moddir <moddir>`: optional mod directory under the game root. Defaults to the app's base mod in the supported games list, for example `svencoop` for 225840 and `valve` for 70; required for other app IDs.
 - `-uninstall`: remove MetaHook instead of installing it.
+- `-describe-target`: validate and describe the game without requiring a payload, copying files or creating a shortcut. Prints one JSON object with `GameDirectory` (absolute path), `ModDirectory` and `LauncherPath`. Assumes a complete payload containing both launchers; ordinary installation still falls back to the blob launcher when the normal payload launcher is absent.
+- `-include-debug-symbols`: also copy root `.pdb` files when installing, retaining their names even when `MetaHook.exe` is renamed to `svencoop.exe`. Normal installations continue to omit root symbols.
 - `-help`: print usage.
+
+`-uninstall`, `-describe-target` and `-include-debug-symbols` are mutually exclusive. Query errors go to stderr and return exit code `1`. Omitting `-gamedir` also enables Steam discovery in query mode:
+
+```powershell
+.\MetahookInstallerCLI.exe -appid 225840 -describe-target
+.\MetahookInstallerCLI.exe -appid 70 -gamedir "D:\Games\Half-Life" -include-debug-symbols
+```
+
+The MetaHookSv aggregator's opt-in `LaunchGame` project builds this CLI automatically, queries the debugger path at CMake configuration time, and deploys a freshly staged payload plus symbols before F5 launches the game. Game files are only modified by the deployment build, not by the configure-time query.
 
 Both installation and uninstallation require `<gamedir>/<moddir>/liblist.gam`, so a mistyped mod directory cannot remove the root launchers. The exit code is `0` on success and `1` on invalid arguments, errors, or files that could not be deleted during uninstallation.
 
