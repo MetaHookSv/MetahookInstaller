@@ -223,16 +223,16 @@
     <value>Open</value>
   </data>
   <data name="Folder_Mod" xml:space="preserve">
-    <value>Metahook</value>
+    <value>MetaHook</value>
   </data>
   <data name="Folder_Game" xml:space="preserve">
-    <value>Game</value>
+    <value>Target Game</value>
   </data>
   <data name="Folder_Installed" xml:space="preserve">
-    <value>Installed</value>
+    <value>Target Mod</value>
   </data>
   <data name="Folder_Build" xml:space="preserve">
-    <value>Source files</value>
+    <value>Installation source</value>
   </data>
   <data name="Folder_Player" xml:space="preserve">
     <value>Player Models</value>
@@ -250,13 +250,13 @@
     <value>Scripts</value>
   </data>
   <data name="Folder_GameContent" xml:space="preserve">
-    <value>Game Contents</value>
+    <value>Game contents</value>
   </data>
   <data name="Folder_ModContent" xml:space="preserve">
-    <value>Metahook Contents</value>
+    <value>MetaHook Installation</value>
   </data>
   <data name="Folder_Config" xml:space="preserve">
-    <value>Metahook Config</value>
+    <value>MetaHook Config</value>
   </data>
   <data name="InstallationFailed" xml:space="preserve">
     <value>Installation failed due to an error.</value>
