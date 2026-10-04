@@ -7,23 +7,23 @@ namespace MetahookInstaller;
 public static class InstallPayload
 {
     // Release builds only look next to the executable; Debug builds also search its ancestors.
-    public static string? FindApplicationSourceDirectory()
+    public static string? FindApplicationSourceDirectory(bool pluginsOnly = false)
     {
 #if DEBUG
-        return FindSourceDirectory(AppContext.BaseDirectory, true);
+        return FindSourceDirectory(AppContext.BaseDirectory, true, pluginsOnly);
 #else
-        return FindSourceDirectory(AppContext.BaseDirectory, false);
+        return FindSourceDirectory(AppContext.BaseDirectory, false, pluginsOnly);
 #endif
     }
 
-    public static string? FindSourceDirectory(string applicationDirectory, bool searchParents)
+    public static string? FindSourceDirectory(string applicationDirectory, bool searchParents, bool pluginsOnly = false)
     {
         DirectoryInfo? directory = new(Path.GetFullPath(applicationDirectory));
         while (directory != null)
         {
             var source = Path.Combine(directory.FullName, "install", "output");
-            if (File.Exists(Path.Combine(source, "MetaHook.exe")) ||
-                File.Exists(Path.Combine(source, "MetaHook_blob.exe")))
+            if (pluginsOnly ? HasPlugins(source) :
+                File.Exists(Path.Combine(source, "MetaHook.exe")) || File.Exists(Path.Combine(source, "MetaHook_blob.exe")))
                 return source;
             if (!searchParents)
                 break;
@@ -39,6 +39,41 @@ public static class InstallPayload
             isNonBlobEngine ? (isSvenCoop ? "svencoop.exe" : "MetaHook.exe") : "MetaHook_blob.exe");
     }
 
+    private static bool HasPlugins(string source)
+    {
+        var plugins = Path.Combine(source, "svencoop", "metahook", "plugins");
+        return Directory.Exists(plugins) && Directory.EnumerateFiles(plugins)
+            .Any(file => Path.GetExtension(file).Equals(".dll", StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static void InstallPlugins(string source, string gameDirectory, string modDirectory)
+    {
+        if (!HasPlugins(source))
+            throw new DirectoryNotFoundException("Plugin payload must contain svencoop/metahook/plugins/*.dll.");
+        CopyResources(source, gameDirectory, modDirectory, preservePluginLists: true);
+    }
+
+    private static void CopyResources(string source, string gameDirectory, string modDirectory, bool preservePluginLists = false)
+    {
+        var isSvenCoop = modDirectory.Equals("svencoop", StringComparison.OrdinalIgnoreCase);
+        var commonResources = Path.Combine(source, "svencoop");
+        if (Directory.Exists(commonResources))
+            CopyDirectory(commonResources, Path.Combine(gameDirectory, modDirectory), preservePluginLists);
+
+        foreach (var folder in Directory.GetDirectories(source).Where(directory =>
+            Path.GetFileName(directory).Equals(modDirectory, StringComparison.OrdinalIgnoreCase) ||
+            Path.GetFileName(directory).StartsWith(modDirectory + "_", StringComparison.OrdinalIgnoreCase)))
+        {
+            if (isSvenCoop && Path.GetFileName(folder).Equals("svencoop", StringComparison.OrdinalIgnoreCase))
+                continue;
+            CopyDirectory(folder, Path.Combine(gameDirectory, Path.GetFileName(folder)), preservePluginLists);
+        }
+
+        var platform = Path.Combine(source, "platform");
+        if (isSvenCoop && Directory.Exists(platform))
+            CopyDirectory(platform, Path.Combine(gameDirectory, "platform"), preservePluginLists);
+    }
+
     public static string Install(string source, string gameDirectory, string modDirectory,
         bool isNonBlobEngine, bool needsSdl, bool includeDebugSymbols = false)
     {
@@ -50,22 +85,7 @@ public static class InstallPayload
 
         var isSvenCoop = modDirectory.Equals("svencoop", StringComparison.OrdinalIgnoreCase);
         var targetLauncher = GetLauncherPath(gameDirectory, modDirectory, isNonBlobEngine);
-        var commonResources = Path.Combine(source, "svencoop");
-        if (Directory.Exists(commonResources))
-            CopyDirectory(commonResources, Path.Combine(gameDirectory, modDirectory));
-
-        foreach (var folder in Directory.GetDirectories(source).Where(directory =>
-            Path.GetFileName(directory).Equals(modDirectory, StringComparison.OrdinalIgnoreCase) ||
-            Path.GetFileName(directory).StartsWith(modDirectory + "_", StringComparison.OrdinalIgnoreCase)))
-        {
-            if (isSvenCoop && Path.GetFileName(folder).Equals("svencoop", StringComparison.OrdinalIgnoreCase))
-                continue;
-            CopyDirectory(folder, Path.Combine(gameDirectory, Path.GetFileName(folder)));
-        }
-
-        var platform = Path.Combine(source, "platform");
-        if (isSvenCoop && Directory.Exists(platform))
-            CopyDirectory(platform, Path.Combine(gameDirectory, "platform"));
+        CopyResources(source, gameDirectory, modDirectory);
 
         File.Copy(sourceLauncher, targetLauncher, true);
         foreach (var file in Directory.GetFiles(source).Where(file =>
@@ -99,12 +119,19 @@ public static class InstallPayload
         return targetLauncher;
     }
 
-    private static void CopyDirectory(string source, string destination)
+    private static void CopyDirectory(string source, string destination, bool preservePluginLists = false)
     {
         Directory.CreateDirectory(destination);
         foreach (var file in Directory.GetFiles(source))
+        {
+            var name = Path.GetFileName(file);
+            if (preservePluginLists && (name.Equals("plugins.lst", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("plugins_svencoop.lst", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("plugins_goldsrc.lst", StringComparison.OrdinalIgnoreCase)))
+                continue;
             File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), true);
+        }
         foreach (var directory in Directory.GetDirectories(source))
-            CopyDirectory(directory, Path.Combine(destination, Path.GetFileName(directory)));
+            CopyDirectory(directory, Path.Combine(destination, Path.GetFileName(directory)), preservePluginLists);
     }
 }

@@ -23,11 +23,21 @@ public static class MetahookSetup
     }
 
     // Describes a complete payload (both launchers) without requiring or deploying it.
-    public static string DescribeLauncherPath(string gameDirectory, string modDirectory)
+    public static string DescribeLauncherPath(string gameDirectory, string modDirectory, bool pluginsOnly = false)
     {
         EnsureValidInstallTarget(gameDirectory, modDirectory);
-        return InstallPayload.GetLauncherPath(Path.GetFullPath(gameDirectory), modDirectory,
+        var launcher = InstallPayload.GetLauncherPath(Path.GetFullPath(gameDirectory), modDirectory,
             PortableExecutable.IsLegitimatePE(Path.Combine(gameDirectory, "hw.dll")));
+        if (pluginsOnly && (!File.Exists(launcher) || !Directory.Exists(Path.Combine(gameDirectory, modDirectory, "metahook"))))
+            throw new InvalidOperationException("Install MetaHook before deploying plugins: the expected launcher and mod's metahook directory must exist.");
+        return launcher;
+    }
+
+    public static string InstallPlugins(string source, string gameDirectory, string modDirectory)
+    {
+        var launcher = DescribeLauncherPath(gameDirectory, modDirectory, pluginsOnly: true);
+        InstallPayload.InstallPlugins(source, gameDirectory, modDirectory);
+        return launcher;
     }
 
     // Returns the installed launcher path.
