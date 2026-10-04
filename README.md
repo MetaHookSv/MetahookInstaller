@@ -76,6 +76,14 @@ Arguments (case-insensitive):
 - `-describe-target`: validate and describe the game without requiring a payload, copying files or creating a shortcut. Prints one JSON object with `GameDirectory` (absolute path), `ModDirectory` and `LauncherPath`. Assumes a complete payload containing both launchers; ordinary installation still falls back to the blob launcher when the normal payload launcher is absent.
 - `-include-debug-symbols`: also copy root `.pdb` files when installing, retaining their names even when `MetaHook.exe` is renamed to `svencoop.exe`. Normal installations continue to omit root symbols.
 - `-help`: print usage.
+- `-plugins-only`: deploy a standalone plugin payload into an existing MetaHook installation. Accepts `-describe-target` to validate/query that installation, or `-include-debug-symbols` when installing. Cannot be combined with `-uninstall`.
+
+Plugin-only payloads require `install/output/svencoop/metahook/plugins/*.dll`, but no launcher. The existing launcher and `<moddir>/metahook/` must exist. Common resources are mapped to the selected mod as in a full install, including plugin PDBs and dependency libraries under the mod directory. Root executables, DLLs and PDBs are never copied; plugin lists and their templates are neither overwritten, created nor deleted. No shortcut is created. Install MetaHook and enable the plugin in `plugins.lst` first; this mode does not install missing runtime dependencies or enable plugins automatically.
+
+```powershell
+.\MetahookInstallerCLI.exe -appid 225840 -plugins-only -describe-target
+.\MetahookInstallerCLI.exe -appid 225840 -plugins-only -include-debug-symbols
+```
 
 `-uninstall`, `-describe-target` and `-include-debug-symbols` are mutually exclusive. Query errors go to stderr and return exit code `1`. Omitting `-gamedir` also enables Steam discovery in query mode:
 

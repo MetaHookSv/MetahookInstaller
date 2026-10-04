@@ -27,7 +27,7 @@ try
     if (options.DescribeTarget)
     {
         var gameDirectory = Path.GetFullPath(target.GameDirectory);
-        var launcherPath = MetahookSetup.DescribeLauncherPath(gameDirectory, target.ModDirectory);
+        var launcherPath = MetahookSetup.DescribeLauncherPath(gameDirectory, target.ModDirectory, options.PluginsOnly);
         Console.WriteLine(JsonSerializer.Serialize(new
         {
             GameDirectory = gameDirectory,
@@ -58,9 +58,16 @@ try
         return 0;
     }
 
-    var source = InstallPayload.FindApplicationSourceDirectory()
+    var source = InstallPayload.FindApplicationSourceDirectory(options.PluginsOnly)
         ?? throw new DirectoryNotFoundException(
             "The install/output folder cannot be located next to MetahookInstallerCLI.exe. Please extract the complete archive before running the programme.");
+    if (options.PluginsOnly)
+    {
+        var existingLauncher = MetahookSetup.InstallPlugins(source, target.GameDirectory, target.ModDirectory);
+        Console.WriteLine($"Updated plugins for {target.GameName}: {Path.Combine(target.GameDirectory, target.ModDirectory)}");
+        Console.WriteLine($"Launcher: {existingLauncher}");
+        return 0;
+    }
     var launcher = MetahookSetup.Install(source, target.GameDirectory, target.ModDirectory, options.IncludeDebugSymbols);
     var shortcut = MetahookSetup.CreateShortcut(shortcutDirectory, target.GameName, launcher,
         target.GameDirectory, target.ModDirectory);

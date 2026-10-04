@@ -3,6 +3,117 @@ using MetahookInstaller.CLI;
 
 var cases = new (string Name, Action<Fixture> Run)[]
 {
+    ("Plugin payload discovery does not require or accept only a launcher", fixture =>
+    {
+        var source = fixture.Payload(normal: false, blob: false);
+        Equal<string?>(null, InstallPayload.FindSourceDirectory(fixture.Path("package"), false));
+        Equal(source, InstallPayload.FindSourceDirectory(fixture.Path("package"), false, pluginsOnly: true));
+        File.Delete(fixture.Path("package/install/output/svencoop/metahook/plugins/Plugin.dll"));
+        fixture.Write("package/install/output/MetaHook.exe", "normal");
+        Equal<string?>(null, InstallPayload.FindSourceDirectory(fixture.Path("package"), false, pluginsOnly: true));
+    }),
+    ("Plugin deployment maps resources and preserves launchers, runtime files and lists", fixture =>
+    {
+        foreach (var mod in new[] { "svencoop", "valve" })
+        {
+            var source = fixture.Payload(normal: false, blob: false);
+            var game = fixture.Game(mod);
+            fixture.NormalEngine();
+            var launcher = fixture.Write("game/" + (mod == "svencoop" ? "svencoop.exe" : "MetaHook.exe"), "installed launcher");
+            fixture.Write("game/libcurl.dll", "existing runtime");
+            fixture.Write("game/MetaHook.pdb", "existing symbols");
+            fixture.Write($"game/{mod}/metahook/configs/plugins.lst", "user list");
+            fixture.Write($"game/{mod}/metahook/configs/plugins_svencoop.lst", "existing template");
+            fixture.Write($"game/{mod}/metahook/plugins/Other.dll", "other plugin");
+            fixture.Write("package/install/output/svencoop/metahook/configs/PLUGINS.LST", "must not overwrite");
+            fixture.Write("package/install/output/svencoop/metahook/plugins/Plugin.pdb", "plugin symbols");
+            fixture.Write("package/install/output/svencoop/metahook/dlls/dependency.dll", "dependency");
+            Equal(launcher, MetahookSetup.InstallPlugins(source, game, mod));
+            Equal("installed launcher", File.ReadAllText(launcher));
+            Equal("existing runtime", File.ReadAllText(fixture.Path("game/libcurl.dll")));
+            Equal("existing symbols", File.ReadAllText(fixture.Path("game/MetaHook.pdb")));
+            Equal("user list", File.ReadAllText(fixture.Path($"game/{mod}/metahook/configs/plugins.lst")));
+            Equal("existing template", File.ReadAllText(fixture.Path($"game/{mod}/metahook/configs/plugins_svencoop.lst")));
+            Absent(fixture.Path($"game/{mod}/metahook/configs/plugins_goldsrc.lst"));
+            Equal("other plugin", File.ReadAllText(fixture.Path($"game/{mod}/metahook/plugins/Other.dll")));
+            Equal("plugin", File.ReadAllText(fixture.Path($"game/{mod}/metahook/plugins/Plugin.dll")));
+            Equal("plugin symbols", File.ReadAllText(fixture.Path($"game/{mod}/metahook/plugins/Plugin.pdb")));
+            Exists(fixture.Path($"game/{mod}/metahook/dlls/dependency.dll"));
+            Exists(fixture.Path(mod == "svencoop" ? "game/svencoop_downloads/resource.dat" : "game/valve_hidpi/resource.dat"));
+        }
+    }),
+    ("Plugin query requires an installed launcher and MetaHook directory without writing", fixture =>
+    {
+        var game = fixture.Game("valve");
+        fixture.NormalEngine();
+        Throws<InvalidOperationException>(() => MetahookSetup.DescribeLauncherPath(game, "valve", pluginsOnly: true));
+        fixture.Directory("game/valve/metahook");
+        Throws<InvalidOperationException>(() => MetahookSetup.DescribeLauncherPath(game, "valve", pluginsOnly: true));
+        fixture.Write("game/MetaHook.exe", "normal");
+        Equal(fixture.Path("game/MetaHook.exe"), MetahookSetup.DescribeLauncherPath(game, "valve", pluginsOnly: true));
+        File.Delete(fixture.Path("game/hw.dll"));
+        fixture.Write("game/MetaHook_blob.exe", "blob");
+        var before = fixture.Snapshot();
+        Equal(fixture.Path("game/MetaHook_blob.exe"), MetahookSetup.DescribeLauncherPath(game, "valve", pluginsOnly: true));
+        Equal(before, fixture.Snapshot());
+        Throws<InvalidOperationException>(() => MetahookSetup.DescribeLauncherPath(game, "missing", pluginsOnly: true));
+    }),
+    ("Plugin install rejects invalid payloads and missing installations before copying", fixture =>
+    {
+        var source = fixture.Payload(normal: false, blob: false);
+        var game = fixture.Game("valve");
+        Throws<InvalidOperationException>(() => MetahookSetup.InstallPlugins(source, game, "valve"));
+        Absent(fixture.Path("game/valve/metahook"));
+        fixture.Write("game/MetaHook_blob.exe", "blob");
+        fixture.Directory("game/valve/metahook");
+        Throws<DirectoryNotFoundException>(() => MetahookSetup.InstallPlugins(fixture.Directory("empty payload"), game, "valve"));
+        Equal(fixture.Path("game/MetaHook_blob.exe"), MetahookSetup.InstallPlugins(source, game, "valve"));
+        Absent(fixture.Path("game/valve/metahook/configs/plugins.lst"));
+        Absent(fixture.Path("game/valve/metahook/configs/plugins_goldsrc.lst"));
+    }),
+    ("Plugin options compose with query and symbols but not uninstall", _ =>
+    {
+        Equal(true, CommandLineOptions.Parse(["-appid", "70", "-PLUGINS-ONLY", "-describe-target"]).PluginsOnly);
+        Equal(true, CommandLineOptions.Parse(["-appid", "70", "-plugins-only", "-include-debug-symbols"]).IncludeDebugSymbols);
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "70", "-plugins-only", "-uninstall"]));
+    }),
+    ("CLI plugin query and install work without payload launchers or shortcuts", fixture =>
+    {
+        var game = fixture.Game("valve");
+        fixture.Write("game/MetaHook_blob.exe", "installed blob");
+        fixture.Directory("game/valve/metahook");
+        fixture.CopyCli();
+        var before = fixture.Snapshot();
+        var query = fixture.RunCli("-appid", "70", "-gamedir", game, "-plugins-only", "-describe-target");
+        Equal(0, query.ExitCode);
+        Equal("", query.Error);
+        using var json = System.Text.Json.JsonDocument.Parse(query.Output);
+        Equal(fixture.Path("game/MetaHook_blob.exe"), json.RootElement.GetProperty("LauncherPath").GetString());
+        Equal(before, fixture.Snapshot());
+        fixture.Payload(normal: false, blob: false);
+        var install = fixture.RunCli("-appid", "70", "-gamedir", game, "-plugins-only", "-include-debug-symbols");
+        Equal("", install.Error);
+        Equal(0, install.ExitCode);
+        Exists(fixture.Path("game/valve/metahook/plugins/Plugin.dll"));
+        Equal("installed blob", File.ReadAllText(fixture.Path("game/MetaHook_blob.exe")));
+        Absent(fixture.Path("working/MetaHook for Half-Life.lnk"));
+        Absent(fixture.Path("game/libcurl.dll"));
+        File.Delete(fixture.Path("game/MetaHook_blob.exe"));
+        var invalid = fixture.RunCli("-appid", "70", "-gamedir", game, "-plugins-only", "-describe-target");
+        Equal(1, invalid.ExitCode);
+        Equal("", invalid.Output);
+        Equal(true, invalid.Error.Contains("Install MetaHook"));
+    }),
+    ("Locked plugin deployment reports failure", fixture =>
+    {
+        var source = fixture.Payload(normal: false, blob: false);
+        var game = fixture.Game("valve");
+        fixture.Write("game/MetaHook_blob.exe", "blob");
+        var plugin = fixture.Write("game/valve/metahook/plugins/Plugin.dll", "old");
+        using (new FileStream(plugin, FileMode.Open, FileAccess.Read, FileShare.None))
+            Throws<IOException>(() => MetahookSetup.InstallPlugins(source, game, "valve"));
+        Equal("old", File.ReadAllText(plugin));
+    }),
     ("Describe target selects the same launcher without changing the game", fixture =>
     {
         foreach (var mod in new[] { "svencoop", "valve" })
@@ -355,6 +466,30 @@ sealed class Fixture : IDisposable
     {
         Write($"game/{mod}/liblist.gam", "fixture");
         return Path("game");
+    }
+    public string Snapshot() => string.Join("\n", System.IO.Directory.GetFiles(root, "*", SearchOption.AllDirectories)
+        .OrderBy(path => path).Select(path => path + ":" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)))));
+    public void CopyCli()
+    {
+        var output = System.IO.Path.GetDirectoryName(typeof(CommandLineOptions).Assembly.Location)!;
+        Directory("package");
+        foreach (var file in System.IO.Directory.GetFiles(output))
+            File.Copy(file, Path("package/" + System.IO.Path.GetFileName(file)), true);
+    }
+    public (int ExitCode, string Output, string Error) RunCli(params string[] arguments)
+    {
+        var start = new System.Diagnostics.ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = Directory("working"), UseShellExecute = false,
+            RedirectStandardOutput = true, RedirectStandardError = true,
+        };
+        start.ArgumentList.Add(Path("package/MetahookInstallerCLI.dll"));
+        foreach (var argument in arguments) start.ArgumentList.Add(argument);
+        using var process = System.Diagnostics.Process.Start(start)!;
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
+        process.WaitForExit();
+        return (process.ExitCode, output.GetAwaiter().GetResult(), error.GetAwaiter().GetResult());
     }
     public void NormalEngine()
     {
