@@ -483,6 +483,17 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private void InsertAvailablePlugin(PluginInfo plugin)
+    {
+        var index = 0;
+        while (index < _avaliable.Count &&
+               StringComparer.OrdinalIgnoreCase.Compare(_avaliable[index].Name, plugin.Name) < 0)
+        {
+            index++;
+        }
+        _avaliable.Insert(index, plugin);
+    }
+
     private bool IsEditorUsable()
     {
         if (Selected == null || Selected.GamePath == null)
@@ -550,7 +561,7 @@ public class MainViewModel : ViewModelBase
         }
         foreach (var p in aps)
         {
-            _avaliable.Add(p);
+            InsertAvailablePlugin(p);
         }
         RecaculatePluginIndex();
         NotificationManager?.Show(new Notification(
@@ -723,7 +734,7 @@ public class MainViewModel : ViewModelBase
                 if (SelectedPlugin is PluginInfo plugin)
                 {
                     Plugins.Remove(plugin);
-                    Avaliable.Add(plugin);
+                    InsertAvailablePlugin(plugin);
                     RecaculatePluginIndex();
                 }
             },

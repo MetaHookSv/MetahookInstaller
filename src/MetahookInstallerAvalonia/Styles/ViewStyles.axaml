@@ -71,6 +71,8 @@
         </Style>
         <Style Selector="ListBox.ItemsDragAndDrop ListBoxItem">
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+        <Style Selector="ListBox.ItemsDragAndDrop ListBoxItem PathIcon.PluginDragHandle">
       <Setter Property="(Interaction.Behaviors)">
         <BehaviorCollectionTemplate>
           <BehaviorCollection>
