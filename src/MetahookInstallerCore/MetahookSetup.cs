@@ -22,13 +22,21 @@ public static class MetahookSetup
                 $"Invalid install target: {Path.Combine(gameDirectory, modDirectory, "liblist.gam")} does not exist.");
     }
 
+    // Describes a complete payload (both launchers) without requiring or deploying it.
+    public static string DescribeLauncherPath(string gameDirectory, string modDirectory)
+    {
+        EnsureValidInstallTarget(gameDirectory, modDirectory);
+        return InstallPayload.GetLauncherPath(Path.GetFullPath(gameDirectory), modDirectory,
+            PortableExecutable.IsLegitimatePE(Path.Combine(gameDirectory, "hw.dll")));
+    }
+
     // Returns the installed launcher path.
-    public static string Install(string source, string gameDirectory, string modDirectory)
+    public static string Install(string source, string gameDirectory, string modDirectory, bool includeDebugSymbols = false)
     {
         EnsureValidInstallTarget(gameDirectory, modDirectory);
         var hwDllPath = Path.Combine(gameDirectory, "hw.dll");
         return InstallPayload.Install(source, gameDirectory, modDirectory,
-            PortableExecutable.IsLegitimatePE(hwDllPath), PortableExecutable.HasImportedModule(hwDllPath, "sdl2.dll"));
+            PortableExecutable.IsLegitimatePE(hwDllPath), PortableExecutable.HasImportedModule(hwDllPath, "sdl2.dll"), includeDebugSymbols);
     }
 
     // Deletes every MetaHook file it can and reports the rest; root runtime DLLs are left in place.
