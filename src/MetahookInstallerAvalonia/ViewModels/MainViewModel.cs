@@ -3,6 +3,7 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using MetahookInstallerAvalonia.Handler;
+using MetahookInstallerAvalonia.Installation;
 using MetahookInstallerAvalonia.Lang;
 using Microsoft.Win32;
 using ReactiveUI;
@@ -29,58 +30,13 @@ public class MainViewModel : ViewModelBase
     public WindowNotificationManager? NotificationManager { get; set; }
     public WindowToastManager? ToastManager { get; set; }
     #region Page 1
-    private static string? FindBuildPath()
+    private static string? FindInstallOutputPath()
     {
 #if DEBUG
-        // Debug模式下搜索多级目录
-        var possiblePaths = new[]
-        {
-                Path.GetFullPath("Build"),
-                Path.GetFullPath(Path.Combine("..", "Build")),
-                Path.GetFullPath(Path.Combine("..", "..", "Build")),
-                Path.GetFullPath(Path.Combine("..", "..", "..", "Build")),
-                Path.GetFullPath(Path.Combine("..", "..", "..", "..", "Build")),
-                Path.GetFullPath(Path.Combine("..", "..", "..", "..", "..", "Build")),
-                Path.GetFullPath(Path.Combine("..", "..", "..", "..", "..", "..","Build"))
-            };
+        return InstallPayload.FindSourceDirectory(AppContext.BaseDirectory, true);
 #else
-            var possiblePaths = new[]
-            {
-                Path.GetFullPath("Build"),
-                Path.GetFullPath(Path.Combine("..", "Build")),
-            };
+        return InstallPayload.FindSourceDirectory(AppContext.BaseDirectory, false);
 #endif
-
-        foreach (var path in possiblePaths)
-        {
-            if (Directory.Exists(path))
-            {
-                var exePath1 = Path.Combine(path, "MetaHook.exe");
-                var exePath2 = Path.Combine(path, "MetaHook_blob.exe");
-                if (File.Exists(exePath1) || File.Exists(exePath2))
-                {
-                    return path;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private static void CopyDirectory(string sourceDir, string targetDir)
-    {
-        if (!Directory.Exists(targetDir))
-            Directory.CreateDirectory(targetDir);
-        foreach (var file in Directory.GetFiles(sourceDir))
-        {
-            var targetFile = Path.Combine(targetDir, Path.GetFileName(file));
-            File.Copy(file, targetFile, true);
-        }
-        foreach (var dir in Directory.GetDirectories(sourceDir))
-        {
-            var targetSubDir = Path.Combine(targetDir, Path.GetFileName(dir));
-            CopyDirectory(dir, targetSubDir);
-        }
     }
 
     public static bool IsLegitimatePE(string dllPath)
@@ -237,122 +193,11 @@ public class MainViewModel : ViewModelBase
             MessageBox.ShowAsync(Resources.InvalidInstallPath, Resources.CriticalError, MessageBoxIcon.Error, MessageBoxButton.OK);
             return;
         }
-        // 1. 复制svencoop文件夹
-        var svencoopPath = Path.Combine(basePath, "svencoop");
-        if (Directory.Exists(svencoopPath))
-        {
-
-            CopyDirectory(svencoopPath, Selected.InstallPath);
-        }
-
         string modName = Selected.Directory;
         string gamePath = Selected.GamePath;
-        // 2. 复制mod特定文件夹
-        var modFolders = Directory.GetDirectories(basePath)
-            .Where(d => Path.GetFileName(d).Equals(modName, StringComparison.OrdinalIgnoreCase) ||
-                       Path.GetFileName(d).StartsWith($"{modName}_", StringComparison.OrdinalIgnoreCase));
-        foreach (var folder in modFolders)
-        {
-            var targetPath = Path.Combine(gamePath, Path.GetFileName(folder));
-            CopyDirectory(folder, targetPath);
-        }
-
-        // 3. 如果是Sven Co-op，复制platform文件夹
-        if (modName.Equals("svencoop", StringComparison.OrdinalIgnoreCase))
-        {
-            var platformPath = Path.Combine(basePath, "platform");
-            if (Directory.Exists(platformPath))
-            {
-                var targetPlatformPath = Path.Combine(gamePath, "platform");
-                CopyDirectory(platformPath, targetPlatformPath);
-            }
-        }
-
-        // 4. 检查并复制MetaHook.exe或MetaHook_blob.exe
         var hwDllPath = Path.Combine(gamePath, "hw.dll");
-        var sourceMetaHookPath = Path.Combine(basePath, "MetaHook.exe");
-        var targetMetaHookPath = Path.Combine(gamePath, "MetaHook.exe");
-        bool isNonBlobEngine = IsLegitimatePE(hwDllPath);
-        // 如果hw.dll是合法PE但Build目录中没有MetaHook.exe，回退到MetaHook_blob.exe
-        if (isNonBlobEngine && !File.Exists(sourceMetaHookPath))
-        {
-            isNonBlobEngine = false;
-        }
-        if (isNonBlobEngine)
-        {
-            if (modName.Equals("svencoop", StringComparison.OrdinalIgnoreCase))
-            {
-                targetMetaHookPath = Path.Combine(gamePath, "svencoop.exe");
-            }
-            else
-            {
-                targetMetaHookPath = Path.Combine(gamePath, "MetaHook.exe");
-            }
-        }
-        else
-        {
-            sourceMetaHookPath = Path.Combine(basePath, "MetaHook_blob.exe");
-            targetMetaHookPath = Path.Combine(gamePath, "MetaHook_blob.exe");
-        }
-        if (File.Exists(sourceMetaHookPath))
-        {
-            File.Copy(sourceMetaHookPath, targetMetaHookPath, true);
-        }
-        else
-        {
-            MessageBox.ShowAsync(Resources.FileNotFound, Resources.CriticalError, MessageBoxIcon.Error, MessageBoxButton.OK);
-            throw new Exception("Fatal Error: Could not found " + sourceMetaHookPath);
-        }
-        // 5. 检查并复制SDL2.dll和SDL3.dll
-        if (isNonBlobEngine)
-        {
-            if (HasImportedModule(hwDllPath, "sdl2.dll"))
-            {
-                var sdl2Path = Path.Combine(basePath, "sdl2.dll");
-                var sdl3Path = Path.Combine(basePath, "sdl3.dll");
-
-                if (File.Exists(sdl2Path))
-                {
-                    File.Copy(sdl2Path, Path.Combine(gamePath, "sdl2.dll"), true);
-                }
-                if (File.Exists(sdl3Path))
-                {
-                    File.Copy(sdl3Path, Path.Combine(gamePath, "sdl3.dll"), true);
-                }
-            }
-        }
-        // 6. 检查{GameDirectory}\{ModDirectory}\metahook\configs\下面是否有 plugins.lst，如果没有，则将同目录下的 plugins_svencoop.lst（仅限Sven Co-op） 或 plugins_goldsrc.lst（非Sven Co-op游戏）重命名为 plugins.lst
-        var configsPath = Path.Combine(gamePath, modName, "metahook", "configs");
-        var pluginsLstPath = Path.Combine(configsPath, "plugins.lst");
-
-        if (!File.Exists(pluginsLstPath) && Directory.Exists(configsPath))
-        {
-            var sourcePluginsFile = Path.Combine(configsPath, "plugins_goldsrc.lst");
-
-            if (modName.Equals("svencoop", StringComparison.OrdinalIgnoreCase))
-            {
-                sourcePluginsFile = Path.Combine(configsPath, "plugins_svencoop.lst");
-            }
-
-            if (File.Exists(sourcePluginsFile))
-            {
-                File.Copy(sourcePluginsFile, pluginsLstPath, true);
-            }
-        }
-
-        // 7. 删除{GameDirectory}\{ModDirectory}\metahook\configs\plugins_svencoop.lst 和 {GameDirectory}\{ModDirectory}\metahook\configs\plugins_goldsrc.lst
-        var pluginsSvencoopPath = Path.Combine(configsPath, "plugins_svencoop.lst");
-        var pluginsGoldsrcPath = Path.Combine(configsPath, "plugins_goldsrc.lst");
-
-        if (File.Exists(pluginsSvencoopPath))
-        {
-            File.Delete(pluginsSvencoopPath);
-        }
-
-        if (File.Exists(pluginsGoldsrcPath))
-        {
-            File.Delete(pluginsGoldsrcPath);
-        }
+        var targetMetaHookPath = InstallPayload.Install(basePath, gamePath, modName,
+            IsLegitimatePE(hwDllPath), HasImportedModule(hwDllPath, "sdl2.dll"));
 
         // 8. 为 targetMetaHookPath 创建快捷方式至当前MetahookInstaller.exe所在目录
         var installerPath = Path.GetFullPath(".");
@@ -827,13 +672,13 @@ public class MainViewModel : ViewModelBase
             {
                 try
                 {
-                    var buildPath = FindBuildPath();
-                    if (string.IsNullOrEmpty(buildPath))
+                    var sourcePath = FindInstallOutputPath();
+                    if (string.IsNullOrEmpty(sourcePath))
                     {
                         MessageBox.ShowAsync(Resources.BuildDirectoryNotFound, Resources.CriticalError, MessageBoxIcon.Error, MessageBoxButton.OK);
                         return;
                     }
-                    InstallMod(buildPath);
+                    InstallMod(sourcePath);
                 }
                 catch (IOException ex)
                 {
@@ -980,6 +825,8 @@ public class MainViewModel : ViewModelBase
             {
                 if (arg is not string target || Selected == null)
                     return;
+                if (target == "{SOURCE}")
+                    target = FindInstallOutputPath() ?? string.Empty;
                 target = target.Replace("{GAME}", Selected.GamePath);
                 target = target.Replace("{INSTALLED}", Selected.InstallPath);
                 if (!Directory.Exists(target))

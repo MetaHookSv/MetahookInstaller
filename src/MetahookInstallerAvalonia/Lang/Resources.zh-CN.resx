@@ -169,7 +169,7 @@
     <value>严重错误</value>
   </data>
   <data name="BuildDirectoryNotFound" xml:space="preserve">
-    <value>无法找到Build文件夹，请将所有文件解压到某个文件夹后再运行程序。</value>
+    <value>无法找到 MetahookInstaller.exe 旁的 install/output 文件夹，请完整解压安装包后再运行程序。</value>
   </data>
   <data name="InvalidInstallPath" xml:space="preserve">
     <value>无效的目标路径，请检查游戏路径是否正确。</value>

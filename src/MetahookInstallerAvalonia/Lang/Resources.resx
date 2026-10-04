@@ -169,7 +169,7 @@
     <value>Critical Error</value>
   </data>
   <data name="BuildDirectoryNotFound" xml:space="preserve">
-    <value>The Build folder cannot be located. Please extract all files to a folder before running the programme.</value>
+    <value>The install/output folder cannot be located next to MetahookInstaller.exe. Please extract the complete archive before running the programme.</value>
   </data>
   <data name="InvalidInstallPath" xml:space="preserve">
     <value>Invalid instal target.</value>

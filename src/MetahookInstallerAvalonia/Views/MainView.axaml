@@ -65,7 +65,7 @@ x:DataType="vm:MainViewModel">
         </u:Divider>
         <DockPanel HorizontalAlignment="Left">
           <Button Content="{x:Static lang:Resources.Folder_Build}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="./Build"/>
+          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="{}{SOURCE}"/>
           <Button Content="{x:Static lang:Resources.Folder_Game}" Margin="0 0 8 0"
           Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{GAME\}"/>
           <Button Content="{x:Static lang:Resources.Folder_Installed}" Margin="0 0 8 0"

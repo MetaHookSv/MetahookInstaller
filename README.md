@@ -5,7 +5,7 @@ Windows installer and plugin list editor for [MetaHookSv](https://github.com/hzq
 ## Features
 
 - Discover supported Steam games and select custom GoldSrc game directories.
-- Install or uninstall MetaHook runtime files from a supplied `Build/` directory.
+- Install or uninstall MetaHook runtime files from a supplied `install/output/` directory.
 - Enable, disable and reorder plugins in `metahook/configs/plugins.lst`.
 - Switch between English and Simplified Chinese, and System, Light and Dark themes.
 
@@ -20,7 +20,7 @@ The source was imported from `toolsrc/MetahookInstaller` in MetaHookSv. The orig
 
 Download `MetahookInstaller-windows-x64.7z` from this repository's releases and extract it. The installer is self-contained; installing the .NET runtime is not required.
 
-The installer archive contains only the installer. Obtain a MetaHookSv release separately and copy its complete `Build/` directory next to `MetahookInstaller.exe`:
+The standalone installer archive contains the installer and its runtime dependencies. Obtain a MetaHookSv release separately and place its complete `install/output/` tree next to `MetahookInstaller.exe`. The MetaHookSv aggregate archive already supplies this layout:
 
 ```text
 MetahookInstaller-Output/
@@ -28,13 +28,14 @@ MetahookInstaller-Output/
   README.md
   LICENSE
   ...other installer runtime files...
-  Build/
-    MetaHook.exe and/or MetaHook_blob.exe
-    svencoop/
-    ...other MetaHook release files...
+  install/
+    output/
+      MetaHook.exe and/or MetaHook_blob.exe
+      svencoop/
+      ...other MetaHook release files...
 ```
 
-Start the installer with that directory as the working directory:
+Start the installer:
 
 ```powershell
 Set-Location path\to\MetahookInstaller-Output
@@ -43,7 +44,11 @@ Set-Location path\to\MetahookInstaller-Output
 
 Select a game, or specify a custom game root and mod directory, then click **Install**. The **Editor** tab manages an installed game's plugin list.
 
-The existing installer searches for `Build/` in the current directory or its parent for Release builds, and additional parents for Debug builds. Language (`lang`), theme (`theme`) and generated launch shortcuts are also stored in the current directory.
+Release builds resolve `install/output/` from the executable's directory, independently of the working directory. Debug builds also search its ancestors. Language (`lang`), theme (`theme`) and generated launch shortcuts are stored in the current working directory.
+
+The installer maps common `svencoop/` resources to the selected mod, selects the normal or blob launcher, and installs root runtime DLLs such as libcurl and Steam API. SDL2/SDL3 are replaced only for normal engines that import SDL2. Existing user plugin lists are retained; root tools and debug symbols are not copied to the game.
+
+Installation overwrites matching root runtime DLLs. Uninstall removes MetaHook launcher and mod files; root DLLs remain in the game directory, and original DLL versions are not restored automatically.
 
 ## Build
 
@@ -58,7 +63,17 @@ dotnet build MetahookInstaller.sln -c Release --no-restore
 dotnet run --project src\MetahookInstallerAvalonia.Desktop
 ```
 
-Place a MetaHookSv `Build/` directory in the repository root to exercise installation while developing.
+Place a MetaHookSv `install/output/` tree in the repository root, or an ancestor of the Debug executable, to exercise installation while developing.
+
+## File-system regression tests
+
+The test harness uses .NET without additional test packages. It covers source resolution, resource mapping, launcher selection, runtime DLL copying, SDL conditions and existing plugin list preservation:
+
+```powershell
+dotnet run --project tests/MetahookInstaller.FileTests -c Release
+# Also install a real CMake output tree into temporary simulated game directories:
+dotnet run --project tests/MetahookInstaller.FileTests -c Release -- --payload D:/MetaHookSv/install/output
+```
 
 ## Publish
 
@@ -71,6 +86,12 @@ Copy-Item -LiteralPath README.md,LICENSE -Destination MetahookInstaller-Output
 ```
 
 The current dependency versions emit trimming and AOT analysis warnings. Check the published program's behavior as well as build success.
+
+MetaHookSv publishes a single self-contained executable, including native dependencies, using the following command. Its native DLLs are extracted automatically at runtime:
+
+```powershell
+dotnet publish src/MetahookInstallerAvalonia.Desktop/MetahookInstallerAvalonia.Desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishAot=false -p:PublishTrimmed=false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugSymbols=false -p:DebugType=None -o MetahookInstaller-Output
+```
 
 ## CI and Releases
 
