@@ -270,6 +270,17 @@ var cases = new (string Name, Action<Fixture> Run)[]
         Absent(fixture.Path("game/SteamAppsLocation.exe"));
         Absent(fixture.Path("game/MetaHook.pdb"));
     }),
+    ("A payload without Steam API preserves the host runtime", fixture =>
+    {
+        var source = fixture.Payload();
+        var game = fixture.Game("valve");
+        File.Delete(fixture.Path("package/install/output/steam_api.dll"));
+        InstallPayload.Install(source, game, "valve", true, false);
+        Absent(fixture.Path("game/steam_api.dll"));
+        fixture.Write("game/steam_api.dll", "host Steam API");
+        InstallPayload.Install(source, game, "valve", true, false);
+        Equal("host Steam API", File.ReadAllText(fixture.Path("game/steam_api.dll")));
+    }),
     ("SDL is replaced only when required by a normal engine", fixture =>
     {
         var source = fixture.Payload();
@@ -410,6 +421,11 @@ if (args.Length == 2 && args[0] == "--payload")
     {
         using var fixture = new Fixture();
         var game = fixture.Game(mod);
+        // Default aggregate packages leave Steam API to the game. Older/custom
+        // packages may still supply it, in which case normal DLL copying applies.
+        var hostSteamApi = fixture.Write("game/steam_api.dll", "host Steam API");
+        var payloadSteamApi = System.IO.Path.Combine(source, "steam_api.dll");
+        var expectedSteamApi = File.ReadAllBytes(File.Exists(payloadSteamApi) ? payloadSteamApi : hostSteamApi);
         var launcher = InstallPayload.Install(source, game, mod, true, true);
         Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(System.IO.Path.Combine(source, "MetaHook.exe")))),
             Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(launcher))));
@@ -417,7 +433,7 @@ if (args.Length == 2 && args[0] == "--payload")
         Exists(fixture.Path($"game/{mod}/metahook/gamedata/betterspray/index.json"));
         Exists(fixture.Path($"game/{mod}/metahook/configs/plugins.lst"));
         Exists(fixture.Path("game/libcurl.dll"));
-        Exists(fixture.Path("game/steam_api.dll"));
+        Equal(Convert.ToHexString(expectedSteamApi), Convert.ToHexString(File.ReadAllBytes(hostSteamApi)));
         Console.WriteLine($"PASS: installed the actual CMake payload into a simulated {mod} game");
     }
 }
