@@ -1,4 +1,5 @@
-using MetahookInstallerAvalonia.Installation;
+using MetahookInstaller;
+using MetahookInstaller.CLI;
 
 var cases = new (string Name, Action<Fixture> Run)[]
 {
@@ -113,6 +114,109 @@ var cases = new (string Name, Action<Fixture> Run)[]
         var timestamp = File.GetLastWriteTimeUtc(list);
         InstallPayload.Install(source, game, "valve", true, false);
         Equal(timestamp, File.GetLastWriteTimeUtc(list));
+    }),
+    ("Setup rejects a target without liblist.gam before copying anything", fixture =>
+    {
+        var source = fixture.Payload();
+        fixture.Directory("game/valve");
+        Equal(false, MetahookSetup.IsValidInstallTarget(fixture.Path("game"), "valve"));
+        Throws<InvalidOperationException>(() => MetahookSetup.Install(source, fixture.Path("game"), "valve"));
+        Absent(fixture.Path("game/valve/metahook"));
+        Absent(fixture.Path("game/MetaHook_blob.exe"));
+    }),
+    ("Setup without hw.dll installs the blob launcher", fixture =>
+    {
+        var source = fixture.Payload();
+        var game = fixture.Game("valve");
+        Equal(fixture.Path("game/MetaHook_blob.exe"), MetahookSetup.Install(source, game, "valve"));
+    }),
+    ("Uninstall removes MetaHook files and keeps root DLLs", fixture =>
+    {
+        var source = fixture.Payload();
+        var game = fixture.Game("valve");
+        InstallPayload.Install(source, game, "valve", true, false);
+        fixture.Write("game/MetaHook_blob.exe", "blob");
+        fixture.Write("game/valve/renderer/shader.txt", "renderer");
+        fixture.Write("game/valve/sprites/radio_external.txt", "radio");
+        Equal(0, MetahookSetup.Uninstall(game, "valve").Count);
+        Absent(fixture.Path("game/valve/metahook"));
+        Absent(fixture.Path("game/valve/renderer"));
+        Absent(fixture.Path("game/valve/sprites/radio_external.txt"));
+        Absent(fixture.Path("game/MetaHook.exe"));
+        Absent(fixture.Path("game/MetaHook_blob.exe"));
+        Exists(fixture.Path("game/valve/liblist.gam"));
+        Exists(fixture.Path("game/libcurl.dll"));
+    }),
+    ("Uninstall rejects a mistyped mod directory and keeps the root launchers", fixture =>
+    {
+        var game = fixture.Game("svencoop");
+        fixture.Write("game/MetaHook.exe", "normal");
+        fixture.Write("game/MetaHook_blob.exe", "blob");
+        Throws<InvalidOperationException>(() => MetahookSetup.Uninstall(game, "missing_mod"));
+        Exists(fixture.Path("game/MetaHook.exe"));
+        Exists(fixture.Path("game/MetaHook_blob.exe"));
+    }),
+    ("Uninstall reports locked files and continues", fixture =>
+    {
+        var game = fixture.Game("valve");
+        var locked = fixture.Write("game/MetaHook.exe", "normal");
+        fixture.Write("game/valve/metahook/plugins/Plugin.dll", "plugin");
+        IReadOnlyList<UninstallFailure> failures;
+        using (new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.None))
+            failures = MetahookSetup.Uninstall(game, "valve");
+        Equal(1, failures.Count);
+        Equal(locked, failures[0].Path);
+        Absent(fixture.Path("game/valve/metahook"));
+        Exists(locked);
+    }),
+    ("Shortcuts are created and deleted by game name", fixture =>
+    {
+        var game = fixture.Game("valve");
+        var launcher = fixture.Write("game/MetaHook.exe", "normal");
+        var directory = fixture.Directory("shortcuts");
+        var shortcut = MetahookSetup.CreateShortcut(directory, "Half-Life", launcher, game, "valve");
+        Equal(fixture.Path("shortcuts/MetaHook for Half-Life.lnk"), shortcut);
+        Exists(shortcut);
+        MetahookSetup.DeleteShortcut(directory, "Half-Life");
+        Absent(shortcut);
+        MetahookSetup.DeleteShortcut(directory, "Half-Life");
+    }),
+    ("CLI parses keys case-insensitively and the uninstall switch", _ =>
+    {
+        var options = CommandLineOptions.Parse(["-AppID", "70", "-gamedir", "C:/Games/Half-Life", "-MODDIR", "gearbox", "-uninstall"]);
+        Equal(new CommandLineOptions(70, "C:/Games/Half-Life", "gearbox", true, false), options);
+        Equal(new CommandLineOptions(225840, null, null, false, false), CommandLineOptions.Parse(["-appid", "225840"]));
+        Equal(true, CommandLineOptions.Parse(["-help"]).ShowHelp);
+        Equal(true, CommandLineOptions.Parse(["-appid", "bad", "-?"]).ShowHelp);
+    }),
+    ("CLI rejects invalid arguments", _ =>
+    {
+        Throws<ArgumentException>(() => CommandLineOptions.Parse([]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-gamedir", "C:/Games"]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid"]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "-moddir", "valve"]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "abc"]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "-5"]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "0"]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "70", "-unknown", "x"]));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "70", "valve"]));
+    }),
+    ("CLI resolves known games, custom mods and Steam directories", fixture =>
+    {
+        var steam = fixture.Directory("steam/Sven Co-op");
+        Equal(new InstallTarget("Sven Co-op", steam, "svencoop"),
+            CommandLineOptions.Parse(["-appid", "225840"]).ResolveTarget(_ => steam));
+        Equal(new InstallTarget("Half-Life", steam, "valve"),
+            CommandLineOptions.Parse(["-appid", "70"]).ResolveTarget(_ => steam));
+        Equal(new InstallTarget("Half-Life Echoes", steam, "ECHOES"),
+            CommandLineOptions.Parse(["-appid", "70", "-moddir", "ECHOES"]).ResolveTarget(_ => steam));
+        Equal(new InstallTarget("mymod", steam, "mymod"),
+            CommandLineOptions.Parse(["-appid", "70", "-moddir", "mymod"]).ResolveTarget(_ => steam));
+        Func<uint, string?> unused = _ => throw new Exception("Steam must not be queried when -gamedir is given");
+        Equal(new InstallTarget("Half-Life", fixture.Path("game"), "valve"),
+            CommandLineOptions.Parse(["-appid", "70", "-gamedir", fixture.Path("game/../game")]).ResolveTarget(unused));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "12345", "-gamedir", steam]).ResolveTarget(unused));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "70"]).ResolveTarget(_ => null));
     })
 };
 

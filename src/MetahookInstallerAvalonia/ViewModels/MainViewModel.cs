@@ -2,14 +2,10 @@
 using Avalonia.Controls.Notifications;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
+using MetahookInstaller;
 using MetahookInstallerAvalonia.Handler;
-using MetahookInstallerAvalonia.Installation;
 using MetahookInstallerAvalonia.Lang;
-using Microsoft.Win32;
 using ReactiveUI;
-using Gameloop.Vdf;
-using Gameloop.Vdf.Linq;
-using ShellLink;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -30,185 +26,19 @@ public class MainViewModel : ViewModelBase
     public WindowNotificationManager? NotificationManager { get; set; }
     public WindowToastManager? ToastManager { get; set; }
     #region Page 1
-    private static string? FindInstallOutputPath()
-    {
-#if DEBUG
-        return InstallPayload.FindSourceDirectory(AppContext.BaseDirectory, true);
-#else
-        return InstallPayload.FindSourceDirectory(AppContext.BaseDirectory, false);
-#endif
-    }
-
-    public static bool IsLegitimatePE(string dllPath)
-    {
-        if (!File.Exists(dllPath))
-            return false;
-        try
-        {
-            using var stream = new FileStream(dllPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var br = new BinaryReader(stream);
-            if (stream.Length < 2 || stream.Length < 0x3C + 4)
-                return false;
-            if (br.ReadUInt16() != 0x5A4D)
-                return false;
-            stream.Position = 0x3C;
-            int lfanew = br.ReadInt32();
-            if (lfanew < 0 || lfanew + 4 > stream.Length)
-                return false;
-            stream.Position = lfanew;
-            if (br.ReadUInt32() != 0x00004550)
-                return false;
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-    private static string ReadNullTerminatedAscii(BinaryReader reader)
-    {
-        var bytes = new System.Collections.Generic.List<byte>();
-        byte b;
-        while ((b = reader.ReadByte()) != 0)
-        {
-            bytes.Add(b);
-        }
-        return System.Text.Encoding.ASCII.GetString(bytes.ToArray());
-    }
-    private static long RvaToFileOffset(BinaryReader stream, int lfanew, uint rva)
-    {
-        try
-        {
-            stream.BaseStream.Position = lfanew + 4 + 20;
-            ushort sizeOfOptionalHeader = stream.ReadUInt16();
-            long sectionTableStart = lfanew + 4 + 20 + 2 + sizeOfOptionalHeader;
-            stream.BaseStream.Position = lfanew + 4 + 2;
-            ushort numberOfSections = stream.ReadUInt16();
-            for (int i = 0; i < numberOfSections; i++)
-            {
-                long sectionPosition = sectionTableStart + i * 40;
-                if (sectionPosition + 40 > stream.BaseStream.Length)
-                    break;
-                stream.BaseStream.Position = sectionPosition + 12;
-                uint virtualAddress = stream.ReadUInt32();
-                stream.BaseStream.Position = sectionPosition + 16;
-                uint sizeOfRawData = stream.ReadUInt32();
-                stream.BaseStream.Position = sectionPosition + 20;
-                uint pointerToRawData = stream.ReadUInt32();
-                if (rva >= virtualAddress && rva < virtualAddress + sizeOfRawData)
-                {
-                    return rva - virtualAddress + pointerToRawData;
-                }
-            }
-            return -1;
-        }
-        catch
-        {
-            return -1;
-        }
-    }
-    public static bool HasImportedModule(string dllPath, string targetModule)
-    {
-        if (!File.Exists(dllPath))
-            return false;
-
-        targetModule = targetModule.ToLowerInvariant();
-        try
-        {
-            using var stream = new FileStream(dllPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var reader = new BinaryReader(stream);
-            if (stream.Length < 0x3C + 4)
-                return false;
-            stream.Position = 0x3C;
-            int lfanew = reader.ReadInt32();
-            if (lfanew + 4 > stream.Length)
-                return false;
-            stream.Position = lfanew;
-            if (reader.ReadUInt32() != 0x00004550)
-                return false;
-            stream.Position = lfanew + 4; // 跳过 PE 签名
-            ushort machine = reader.ReadUInt16();
-            reader.ReadUInt16(); // 跳过 NumberOfSections
-            reader.ReadUInt32(); // 跳过 TimeDateStamp
-            reader.ReadUInt32(); // 跳过 PointerToSymbolTable
-            reader.ReadUInt32(); // 跳过 NumberOfSymbols
-            ushort sizeOfOptionalHeader = reader.ReadUInt16();
-            reader.ReadUInt16(); // 跳过 Characteristics
-            long optionalHeaderStart = stream.Position;
-            bool is64Bit = machine == 0x8664; // 0x8664 表示 x64
-            int dataDirectoryOffset = is64Bit ? 224 : 208;
-            if (optionalHeaderStart + dataDirectoryOffset + 8 > stream.Length)
-                return false; // 数据目录表位置无效
-
-            // 5. 读取导入表在数据目录中的地址（相对虚拟地址 RVA）和大小
-            stream.Position = optionalHeaderStart + dataDirectoryOffset;
-            uint importTableRva = reader.ReadUInt32(); // 导入表的 RVA
-            uint importTableSize = reader.ReadUInt32(); // 导入表大小（若为0则无导入表）
-            if (importTableSize == 0)
-                return false;
-
-            // 6. 将 RVA 转换为文件偏移量（需要通过节表计算）
-            long importTableFileOffset = RvaToFileOffset(reader, lfanew, importTableRva);
-            if (importTableFileOffset == -1)
-                return false;
-
-            // 7. 遍历导入表中的每个 IMAGE_IMPORT_DESCRIPTOR
-            stream.Position = importTableFileOffset;
-            while (true)
-            {
-                // 读取一个导入描述符（简化版，仅关注名称 RVA）
-                uint originalFirstThunk = reader.ReadUInt32();
-                reader.ReadUInt32(); // 跳过 TimeDateStamp
-                reader.ReadUInt32(); // 跳过 ForwarderChain
-                uint nameRva = reader.ReadUInt32(); // 模块名称的 RVA
-                reader.ReadUInt32(); // 跳过 FirstThunk
-
-                // 若所有字段为0，则表示导入表结束
-                if (originalFirstThunk == 0 && nameRva == 0)
-                    break;
-
-                // 8. 解析模块名称
-                if (nameRva == 0)
-                    continue;
-                long nameFileOffset = RvaToFileOffset(reader, lfanew, nameRva);
-                if (nameFileOffset == -1)
-                    continue;
-                stream.Position = nameFileOffset;
-                string moduleName = ReadNullTerminatedAscii(reader).ToLowerInvariant();
-                if (moduleName == targetModule)
-                    return true;
-            }
-            return false;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     private void InstallMod(string basePath)
     {
-        if (Selected == null || Selected.GamePath == null || string.IsNullOrEmpty(Selected.GamePath) || !File.Exists(Path.Combine(Selected.InstallPath, "liblist.gam")))
+        if (Selected == null || Selected.GamePath == null || !MetahookSetup.IsValidInstallTarget(Selected.GamePath, Selected.Directory))
         {
             MessageBox.ShowAsync(Resources.InvalidInstallPath, Resources.CriticalError, MessageBoxIcon.Error, MessageBoxButton.OK);
             return;
         }
         string modName = Selected.Directory;
         string gamePath = Selected.GamePath;
-        var hwDllPath = Path.Combine(gamePath, "hw.dll");
-        var targetMetaHookPath = InstallPayload.Install(basePath, gamePath, modName,
-            IsLegitimatePE(hwDllPath), HasImportedModule(hwDllPath, "sdl2.dll"));
+        var targetMetaHookPath = MetahookSetup.Install(basePath, gamePath, modName);
 
         // 8. 为 targetMetaHookPath 创建快捷方式至当前MetahookInstaller.exe所在目录
-        var installerPath = Path.GetFullPath(".");
-        var shortcutPath = Path.Combine(installerPath, $"MetaHook for {Selected.Name}.lnk");
-        Shortcut lnk = Shortcut.CreateShortcut(
-          targetMetaHookPath,
-            $"-insecure -game {modName}",
-            gamePath,
-            targetMetaHookPath,
-            0);
-        lnk.WriteToFile(shortcutPath);
+        MetahookSetup.CreateShortcut(Path.GetFullPath("."), Selected.Name, targetMetaHookPath, gamePath, modName);
         NotificationManager?.Show(new Notification(
                             Resources.Success,
                             Resources.InstallDone),
@@ -223,85 +53,22 @@ public class MainViewModel : ViewModelBase
 
     private void UninstallMod()
     {
-        if (Selected == null || Selected.GamePath == null)
+        if (Selected == null || Selected.GamePath == null || !MetahookSetup.IsValidInstallTarget(Selected.GamePath, Selected.Directory))
         {
             MessageBox.ShowAsync(Resources.InvalidInstallPath, Resources.CriticalError, MessageBoxIcon.Error, MessageBoxButton.OK);
             return;
         }
-        string modName = Selected.Directory;
-        string gamePath = Selected.GamePath;
-        string[] list = [
-            $"{modName}/metahook/",
-            $"{modName}/renderer/",
-            $"{modName}/scmodeldownloader/",
-            $"{modName}/vgui2ext/",
-            $"{modName}/captionmod/",
-            $"{modName}/bulletphysics/",
-            $"{modName}/sprites/radio_external.txt",
-            $"{modName}/sprites/voiceicon_external.txt",
-            "MetaHook.exe",
-            "MetaHook_blob.exe"
-            ];
-        foreach (var item in list)
+        foreach (var failure in MetahookSetup.Uninstall(Selected.GamePath, Selected.Directory))
         {
-            if (item.EndsWith('/'))
-            {
-                var dirPath = Path.Combine(gamePath, item.TrimEnd('/'));
-                if (Directory.Exists(dirPath))
-                {
-                    try
-                    {
-                        Directory.Delete(dirPath, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        NotificationManager?.Show(new Notification(
-                                Resources.Warning,
-                                string.Format(Resources.DeleteFailed, dirPath, ex.Message)),
-                            NotificationType.Warning,
-                            new TimeSpan(0, 0, 5), true,
-                            classes: ["Light"]);
-                    }
-                }
-            }
-            else
-            {
-                var filePath = Path.Combine(gamePath, item);
-                if (File.Exists(filePath))
-                {
-                    try
-                    {
-                        File.Delete(filePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        NotificationManager?.Show(new Notification(
-                                Resources.Warning,
-                                string.Format(Resources.DeleteFailed, filePath, ex.Message)),
-                            NotificationType.Warning,
-                            new TimeSpan(0, 0, 5), true,
-                            classes: ["Light"]);
-                    }
-                }
-            }
+            NotificationManager?.Show(new Notification(
+                    Resources.Warning,
+                    string.Format(Resources.DeleteFailed, failure.Path, failure.Message)),
+                NotificationType.Warning,
+                new TimeSpan(0, 0, 5), true,
+                classes: ["Light"]);
         }
         // Delete desktop shortcut
-        var installerPath = Path.GetFullPath(".");
-        if (installerPath != null)
-        {
-            var shortcutPath = Path.Combine(installerPath, $"MetaHook for {Selected.Name}.lnk");
-            if (File.Exists(shortcutPath))
-            {
-                try
-                {
-                    File.Delete(shortcutPath);
-                }
-                catch
-                {
-                    // Ignore shortcut deletion failure
-                }
-            }
-        }
+        MetahookSetup.DeleteShortcut(Path.GetFullPath("."), Selected.Name);
 
         NotificationManager?.Show(new Notification(
                                 Resources.Success,
@@ -341,88 +108,6 @@ public class MainViewModel : ViewModelBase
     {
         get => _selected;
         set => this.RaiseAndSetIfChanged(ref _selected, value);
-    }
-    private string? _steamPath = null;
-    private string[] GetLibraryFolders()
-    {
-        if (_steamPath == null)
-            return [];
-        var libraryFolders = new List<string> { _steamPath };
-        var configPath = Path.Combine(_steamPath, "steamapps", "libraryfolders.vdf");
-        if (File.Exists(configPath))
-        {
-            try
-            {
-                var vdf = VdfConvert.Deserialize(File.ReadAllText(configPath));
-                foreach (var entry in vdf.Value.Children<VProperty>())
-                {
-                    var pathToken = entry.Value["path"];
-                    if (pathToken != null)
-                    {
-                        libraryFolders.Add(pathToken.ToString());
-                    }
-                }
-            }
-            catch
-            {
-                // Fallback: ignore parse errors, return what we have
-            }
-        }
-
-        return [.. libraryFolders];
-    }
-    private static string? GetInstallDirFromManifest(string manifest)
-    {
-        try
-        {
-            var vdf = VdfConvert.Deserialize(manifest);
-            var installDir = vdf.Value["installdir"];
-            return installDir?.ToString();
-        }
-        catch
-        {
-            return null;
-        }
-    }
-    private static string? GetSteamPath()
-    {
-        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam");
-        if (key == null)
-            return null;
-
-        return key.GetValue("SteamPath") as string;
-    }
-    public string? GetGameInstallPath(uint appId)
-    {
-        if (_steamPath == null)
-        {
-            _steamPath = GetSteamPath();
-            if (_steamPath == null)
-                throw new Exception("Could not found Steam path");
-        }
-
-        var libraryFolders = GetLibraryFolders();
-        foreach (var library in libraryFolders)
-        {
-            var gamePath = Path.Combine(library, "steamapps", "common");
-            if (!Directory.Exists(gamePath))
-                continue;
-
-            var manifestPath = Path.Combine(library, "steamapps", $"appmanifest_{appId}.acf");
-            if (!File.Exists(manifestPath))
-                continue;
-
-            var manifest = File.ReadAllText(manifestPath);
-            var installDir = GetInstallDirFromManifest(manifest);
-            if (string.IsNullOrEmpty(installDir))
-                continue;
-
-            var fullPath = Path.Combine(gamePath, installDir);
-            if (Directory.Exists(fullPath))
-                return fullPath;
-        }
-
-        return null;
     }
     #endregion
 
@@ -624,29 +309,12 @@ public class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         #region Setup Games
-        (string, string, uint)[] list = [
-            new ("Sven Co-op", "svencoop", 225840),
-            new ("Half-Life", "valve", 70),
-            new ("Half-Life Updated", "halflife_updated", 70),
-            new ("Half-Life Opposing Force", "gearbox", 50),
-            new ("Half-Life Blue Shift", "bshift", 130),
-            new ("Half-Life Echoes", "echoes", 70),
-            new ("Half-Life Field Intensity", "field_intensity", 70),
-            new ("Half-Life MMod", "HL1MMod", 1761270),
-            new ("Counter-Strike", "cstrike", 10),
-            new ("Counter-Strike Condition Zero", "czero", 80),
-            new ("Counter-Strike Condition Zero - Deleted Scenes", "czeror", 100),
-            new ("Day of Defeat", "dod", 30),
-            new ("Afraid of Monsters: Director's Cut", "aomdc", 70)];
-
-        foreach (var m in list)
+        var steamLibrary = new SteamLibrary();
+        foreach (var game in KnownGames.All)
         {
-            if (GetGameInstallPath(m.Item3) is string path)
+            if (steamLibrary.FindGameDirectory(game.AppId) is string path)
             {
-                // Normalize the path to ensure consistent directory separators
-                // This fixes the issue where mixed forward and backward slashes break shortcuts
-                var normalizedPath = Path.GetFullPath(path);
-                var info = new ModInfo(m.Item1, m.Item2, m.Item3, normalizedPath);
+                var info = new ModInfo(game.Name, game.ModDirectory, game.AppId, path);
                 if (Directory.Exists(info.InstallPath))
                 {
                     _modInfos.Add(info);
@@ -683,7 +351,7 @@ public class MainViewModel : ViewModelBase
             {
                 try
                 {
-                    var sourcePath = FindInstallOutputPath();
+                    var sourcePath = InstallPayload.FindApplicationSourceDirectory();
                     if (string.IsNullOrEmpty(sourcePath))
                     {
                         MessageBox.ShowAsync(Resources.BuildDirectoryNotFound, Resources.CriticalError, MessageBoxIcon.Error, MessageBoxButton.OK);
@@ -837,7 +505,7 @@ public class MainViewModel : ViewModelBase
                 if (arg is not string target || Selected == null)
                     return;
                 if (target == "{SOURCE}")
-                    target = FindInstallOutputPath() ?? string.Empty;
+                    target = InstallPayload.FindApplicationSourceDirectory() ?? string.Empty;
                 target = target.Replace("{GAME}", Selected.GamePath);
                 target = target.Replace("{INSTALLED}", Selected.InstallPath);
                 if (!Directory.Exists(target))

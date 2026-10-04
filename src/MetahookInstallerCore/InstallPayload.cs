@@ -2,10 +2,20 @@ using System;
 using System.IO;
 using System.Linq;
 
-namespace MetahookInstallerAvalonia.Installation;
+namespace MetahookInstaller;
 
-internal static class InstallPayload
+public static class InstallPayload
 {
+    // Release builds only look next to the executable; Debug builds also search its ancestors.
+    public static string? FindApplicationSourceDirectory()
+    {
+#if DEBUG
+        return FindSourceDirectory(AppContext.BaseDirectory, true);
+#else
+        return FindSourceDirectory(AppContext.BaseDirectory, false);
+#endif
+    }
+
     public static string? FindSourceDirectory(string applicationDirectory, bool searchParents)
     {
         DirectoryInfo? directory = new(Path.GetFullPath(applicationDirectory));

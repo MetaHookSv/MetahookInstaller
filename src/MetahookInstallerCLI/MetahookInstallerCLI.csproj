@@ -2,11 +2,13 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>MetahookInstaller.CLI</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
+
   <ItemGroup>
-    <ProjectReference Include="../../src/MetahookInstallerCore/MetahookInstallerCore.csproj" />
-    <ProjectReference Include="../../src/MetahookInstallerCLI/MetahookInstallerCLI.csproj" />
+    <ProjectReference Include="..\MetahookInstallerCore\MetahookInstallerCore.csproj" />
   </ItemGroup>
 </Project>

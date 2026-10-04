@@ -1,5 +1,5 @@
 name: Build Windows x64 Release
-description: Restore, build and package the MetahookInstaller desktop app.
+description: Restore, build, test and package the MetahookInstaller GUI and CLI.
 
 outputs:
   archive-path:
@@ -22,14 +22,27 @@ runs:
       shell: cmd
       run: dotnet build MetahookInstaller.sln -c Release --no-restore
 
+    - name: Test
+      shell: cmd
+      run: dotnet run --project tests\MetahookInstaller.FileTests -c Release --no-build
+
     - name: Publish
       shell: cmd
       run: dotnet publish src\MetahookInstallerAvalonia.Desktop\MetahookInstallerAvalonia.Desktop.csproj -p:PublishProfile=FolderProfile -o MetahookInstaller-Output
+
+    - name: Publish CLI (single file)
+      shell: cmd
+      run: dotnet publish src\MetahookInstallerCLI\MetahookInstallerCLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build\cli-publish
 
     - name: Prepare output
       shell: pwsh
       run: |
         Move-Item -LiteralPath 'MetahookInstaller-Output\MetahookInstallerAvalonia.Desktop.exe' -Destination 'MetahookInstaller-Output\MetahookInstaller.exe' -Force
+        $cliFiles = @(Get-ChildItem -LiteralPath 'build\cli-publish' -Recurse -File)
+        if ($cliFiles.Count -ne 1 -or $cliFiles[0].Name -ne 'MetahookInstallerCLI.exe') {
+          throw 'CLI publish must contain exactly one self-contained executable.'
+        }
+        Copy-Item -LiteralPath $cliFiles[0].FullName -Destination 'MetahookInstaller-Output'
         Copy-Item -LiteralPath 'README.md', 'LICENSE' -Destination 'MetahookInstaller-Output'
 
     - name: Package
