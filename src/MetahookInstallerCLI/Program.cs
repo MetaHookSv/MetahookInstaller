@@ -28,12 +28,16 @@ try
     {
         var gameDirectory = Path.GetFullPath(target.GameDirectory);
         var launcherPath = MetahookSetup.DescribeLauncherPath(gameDirectory, target.ModDirectory, options.PluginsOnly);
-        Console.WriteLine(JsonSerializer.Serialize(new
+        using var output = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(output))
         {
-            GameDirectory = gameDirectory,
-            target.ModDirectory,
-            LauncherPath = launcherPath,
-        }));
+            writer.WriteStartObject();
+            writer.WriteString("GameDirectory", gameDirectory);
+            writer.WriteString("ModDirectory", target.ModDirectory);
+            writer.WriteString("LauncherPath", launcherPath);
+            writer.WriteEndObject();
+        }
+        Console.WriteLine(System.Text.Encoding.UTF8.GetString(output.ToArray()));
         return 0;
     }
 
