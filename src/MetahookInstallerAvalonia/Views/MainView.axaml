@@ -8,7 +8,7 @@ xmlns:lang="clr-namespace:MetahookInstallerAvalonia.Lang"
 xmlns:views="clr-namespace:MetahookInstallerAvalonia.Views"
 xmlns:u="https://irihi.tech/ursa"
 xmlns:behaviors="using:MetahookInstallerAvalonia.Behavior"
-mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="450"
 x:Class="MetahookInstallerAvalonia.Views.MainView"
 x:DataType="vm:MainViewModel">
 <Design.DataContext>

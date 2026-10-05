@@ -7,7 +7,7 @@ xmlns:u="https://irihi.tech/ursa"
 xmlns:vm="clr-namespace:MetahookInstallerAvalonia.ViewModels"
 xmlns:views="clr-namespace:MetahookInstallerAvalonia.Views"
 xmlns:lang="clr-namespace:MetahookInstallerAvalonia.Lang"
-mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="500"
+mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="500"
 x:Class="MetahookInstallerAvalonia.Views.MainWindow"
 x:DataType="vm:MainViewModel"
 Icon="/Assets/avalonia-logo.ico"
@@ -17,7 +17,7 @@ ExtendClientAreaToDecorationsHint="True"
 ExtendClientAreaTitleBarHeightHint="-1"
 ExtendClientAreaChromeHints="NoChrome"
 CanResize="False"
-Width="800" Height="500"
+Width="960" Height="500"
 CornerRadius="8">
 <Window.Styles>
   <Style Selector="u|IconButton.title-bar-btn">

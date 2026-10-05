@@ -134,17 +134,17 @@ Copy-Item -LiteralPath README.md,LICENSE -Destination MetahookInstaller-Output
 
 The current dependency versions emit trimming and AOT analysis warnings. Check the published program's behavior as well as build success.
 
-The CLI is published as a compressed single-file executable and placed next to `MetahookInstaller.exe`:
+The CLI is published as a trimmed single-file executable with bundle compression disabled and placed next to `MetahookInstaller.exe`:
 
 ```powershell
-dotnet publish src/MetahookInstallerCLI/MetahookInstallerCLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build/cli-publish
+dotnet publish src/MetahookInstallerCLI/MetahookInstallerCLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=false -p:PublishTrimmed=true -p:DebugType=None -p:DebugSymbols=false -o build/cli-publish
 Copy-Item -LiteralPath build\cli-publish\MetahookInstallerCLI.exe -Destination MetahookInstaller-Output
 ```
 
-MetaHookSv publishes the GUI as a single self-contained executable, including native dependencies, using the following command, and ships the CLI next to it. Native DLLs are extracted automatically at runtime:
+MetaHookSv publishes the GUI as a trimmed single self-contained executable, including native dependencies, using the following command, and ships the CLI next to it. Native DLLs are extracted automatically at runtime:
 
 ```powershell
-dotnet publish src/MetahookInstallerAvalonia.Desktop/MetahookInstallerAvalonia.Desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishAot=false -p:PublishTrimmed=false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugSymbols=false -p:DebugType=None -o MetahookInstaller-Output
+dotnet publish src/MetahookInstallerAvalonia.Desktop/MetahookInstallerAvalonia.Desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishAot=false -p:PublishTrimmed=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugSymbols=false -p:DebugType=None -o MetahookInstaller-Output
 ```
 
 ## CI and Releases

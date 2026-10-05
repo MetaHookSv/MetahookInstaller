@@ -32,7 +32,7 @@ runs:
 
     - name: Publish CLI (single file)
       shell: cmd
-      run: dotnet publish src\MetahookInstallerCLI\MetahookInstallerCLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build\cli-publish
+      run: dotnet publish src\MetahookInstallerCLI\MetahookInstallerCLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=false -p:PublishTrimmed=true -p:DebugType=None -p:DebugSymbols=false -o build\cli-publish
 
     - name: Prepare output
       shell: pwsh
