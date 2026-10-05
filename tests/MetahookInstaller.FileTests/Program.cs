@@ -432,7 +432,11 @@ if (args.Length == 2 && args[0] == "--payload")
         Exists(fixture.Path($"game/{mod}/metahook/plugins/BetterSpray.dll"));
         Exists(fixture.Path($"game/{mod}/metahook/gamedata/betterspray/index.json"));
         Exists(fixture.Path($"game/{mod}/metahook/configs/plugins.lst"));
-        Exists(fixture.Path("game/libcurl.dll"));
+        var payloadLibcurl = System.IO.Path.Combine(source, "svencoop/metahook/dlls/libcurl.dll");
+        var installedLibcurl = fixture.Path($"game/{mod}/metahook/dlls/libcurl.dll");
+        Exists(installedLibcurl);
+        Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(payloadLibcurl))),
+            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(installedLibcurl))));
         Equal(Convert.ToHexString(expectedSteamApi), Convert.ToHexString(File.ReadAllBytes(hostSteamApi)));
         Console.WriteLine($"PASS: installed the actual CMake payload into a simulated {mod} game");
     }
