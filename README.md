@@ -1,6 +1,6 @@
 # MetahookInstaller
 
-Windows installer and plugin list editor for [MetaHookSv](https://github.com/hzqst/MetaHookSv), built with Avalonia and ReactiveUI on .NET 8.
+Windows installer and plugin list editor for [MetaHookSv](https://github.com/MetaHookSv/MetaHookSv), built with Avalonia and ReactiveUI on .NET 8.
 
 ## Features
 
