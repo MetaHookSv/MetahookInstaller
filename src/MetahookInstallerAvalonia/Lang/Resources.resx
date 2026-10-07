@@ -169,19 +169,19 @@
     <value>Critical Error</value>
   </data>
   <data name="BuildDirectoryNotFound" xml:space="preserve">
-    <value>The install/output folder cannot be located next to MetahookInstaller.exe. Please extract the complete archive before running the programme.</value>
+    <value>The install/output folder cannot be located next to MetahookInstaller.exe. Please extract the complete archive before running the program.</value>
   </data>
   <data name="InvalidInstallPath" xml:space="preserve">
-    <value>Invalid instal target.</value>
+    <value>Invalid install target.</value>
   </data>
   <data name="FileNotFound" xml:space="preserve">
-    <value>Could not found {0}.</value>
+    <value>Could not find {0}.</value>
   </data>
   <data name="Warning" xml:space="preserve">
     <value>Warning</value>
   </data>
   <data name="DeleteFailed" xml:space="preserve">
-    <value>Failed when deleting {0}. Error message {1}.</value>
+    <value>Failed to delete {0}. Error message: {1}.</value>
   </data>
   <data name="Success" xml:space="preserve">
     <value>Success!</value>
@@ -190,13 +190,13 @@
     <value>Uninstall finished.</value>
   </data>
   <data name="SelectFirst" xml:space="preserve">
-    <value>Please install mod first.</value>
+    <value>Please install the mod first.</value>
   </data>
   <data name="InstallDone" xml:space="preserve">
-    <value>Install Mod finished!</value>
+    <value>Mod installed successfully!</value>
   </data>
   <data name="ResetDone" xml:space="preserve">
-    <value>Reset finished</value>
+    <value>Reset finished.</value>
   </data>
   <data name="SaveDone" xml:space="preserve">
     <value>Saved.</value>
@@ -208,13 +208,13 @@
     <value>中文</value>
   </data>
   <data name="ConfirmTitle" xml:space="preserve">
-    <value>Confirmed to apply modification?</value>
+    <value>Apply this change?</value>
   </data>
   <data name="ConfirmInstall" xml:space="preserve">
-    <value>Installing the new file will replace the original file, and this operation cannot be reversed.</value>
+    <value>Installing the new files will replace the original files. This action cannot be undone.</value>
   </data>
   <data name="ConfirmUninstall" xml:space="preserve">
-    <value>Uninstalling will remove all Metahook-related files, including the metahook folder, and this action cannot be reversed.</value>
+    <value>Uninstalling will remove all Metahook-related files, including the metahook folder. This action cannot be undone.</value>
   </data>
   <data name="Cancelled" xml:space="preserve">
     <value>Cancelled</value>
