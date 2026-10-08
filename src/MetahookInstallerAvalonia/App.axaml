@@ -99,6 +99,6 @@
     <Application.Styles>
         <FluentTheme />
         <semi:SemiTheme />
-        <u-semi:SemiTheme/>
+        <semi:UrsaSemiTheme/>
     </Application.Styles>
 </Application>

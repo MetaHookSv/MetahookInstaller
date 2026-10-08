@@ -51,7 +51,7 @@ public partial class App : Application
         // Keep Ursa's built-in control strings (PopConfirm / MessageBox buttons,
         // etc.) in sync with the installer language. Without this the theme keeps
         // its zh-CN default and shows Chinese buttons in English mode.
-        var ursaTheme = Styles.OfType<Ursa.Themes.Semi.SemiTheme>().FirstOrDefault();
+        var ursaTheme = Styles.OfType<Ursa.Themes.Semi.UrsaSemiTheme>().FirstOrDefault();
         if (ursaTheme != null)
         {
             ursaTheme.Locale = new CultureInfo(NormalizeUrsaLocale(lang));

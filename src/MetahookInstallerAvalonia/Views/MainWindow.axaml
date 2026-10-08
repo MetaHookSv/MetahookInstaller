@@ -15,7 +15,7 @@ TransparencyLevelHint="AcrylicBlur"
 Background="{DynamicResource WindowBackgroundBrush}"
 ExtendClientAreaToDecorationsHint="True"
 ExtendClientAreaTitleBarHeightHint="-1"
-ExtendClientAreaChromeHints="NoChrome"
+WindowDecorations="BorderOnly"
 CanResize="False"
 Width="960" Height="500"
 CornerRadius="8">
