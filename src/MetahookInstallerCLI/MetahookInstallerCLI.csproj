@@ -6,6 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <PublishAot>true</PublishAot>
+    <StripSymbols>true</StripSymbols>
+    <!--securifybv.ShellLink uses classic COM interop (shortcut creation).-->
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
 
   <ItemGroup>

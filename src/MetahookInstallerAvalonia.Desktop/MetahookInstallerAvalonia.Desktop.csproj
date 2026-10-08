@@ -9,6 +9,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PublishTrimmed>True</PublishTrimmed>
     <PublishAot>True</PublishAot>
+    <!--Native AOT size settings; kept here so they apply to every publish, profile or not.-->
+    <TrimMode>full</TrimMode>
+    <StripSymbols>true</StripSymbols>
+    <StackTraceSupport>false</StackTraceSupport>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   <PropertyGroup Label="Avalonia">
     <AvaloniaUseCompiledBindingsByDefault>True</AvaloniaUseCompiledBindingsByDefault>
