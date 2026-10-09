@@ -23,7 +23,7 @@ x:DataType="vm:MainViewModel">
   <Border Background="{DynamicResource BackgroundAcrylicBrush}"
   CornerRadius="8"
   Margin="6"
-  Effect="{DynamicResource MediumShadow}">
+  BoxShadow="{DynamicResource WindowShadow}">
   <!-- 内容容器 -->
   <Grid Background="Transparent">
     <TabControl TabStripPlacement="Left"
@@ -63,7 +63,7 @@ x:DataType="vm:MainViewModel">
         CornerRadius="8"
         BorderBrush="{DynamicResource BorderBrush}"
         BorderThickness="1"
-        Effect="{DynamicResource SmallShadow}">
+        BoxShadow="{DynamicResource CardShadow}">
           <DockPanel>
             <Label DockPanel.Dock="Top" Classes="list-header"
             Content="{x:Static lang:Resources.Folder_ModContent}"/>
@@ -85,7 +85,7 @@ x:DataType="vm:MainViewModel">
         CornerRadius="8"
         BorderBrush="{DynamicResource BorderBrush}"
         BorderThickness="1"
-        Effect="{DynamicResource SmallShadow}">
+        BoxShadow="{DynamicResource CardShadow}">
           <DockPanel>
             <Label DockPanel.Dock="Top" Classes="list-header"
             Content="{x:Static lang:Resources.Folder_GameContent}"/>

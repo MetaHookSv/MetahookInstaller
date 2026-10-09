@@ -62,7 +62,7 @@ Padding="12"
 CornerRadius="8"
 BorderBrush="{DynamicResource BorderBrush}"
 BorderThickness="1"
-Effect="{DynamicResource SmallShadow}">
+BoxShadow="{DynamicResource CardShadow}">
 <StackPanel Spacing="10">
   <!-- 游戏路径 -->
   <StackPanel Spacing="4">
