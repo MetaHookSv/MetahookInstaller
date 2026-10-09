@@ -13,9 +13,9 @@ x:DataType="vm:MainViewModel">
 <Design.DataContext>
   <vm:MainViewModel />
 </Design.DataContext>
-<StackPanel Spacing="20">
+<Grid Margin="16" RowDefinitions="*,Auto" RowSpacing="12">
   <!-- 核心布局：左右列表 + 中间按钮 -->
-  <Grid ColumnDefinitions="* 70 *" RowDefinitions="Auto">
+  <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="12">
     <!-- 左侧已启用插件列表 -->
     <Border Grid.Column="0"
     Background="{DynamicResource SurfaceBrush}"
@@ -23,37 +23,32 @@ x:DataType="vm:MainViewModel">
     BorderBrush="{DynamicResource BorderBrush}"
     BorderThickness="1"
     Effect="{DynamicResource SmallShadow}">
-    <StackPanel>
-      <Label Padding="5"
-      FontSize="13"
-      FontWeight="Medium"
-      Foreground="{DynamicResource TextPrimaryBrush}"
-      Background="{DynamicResource SurfaceLightBrush}"
+    <DockPanel>
+      <Label DockPanel.Dock="Top" Classes="list-header"
       Content="{x:Static lang:Resources.EnabledPlugins}"/>
       <ListBox x:Name="PluginListBox"
       Margin="0"
-      Padding="0"
+      Padding="4"
       BorderThickness="0"
       Background="Transparent"
       ItemsSource="{CompiledBinding Plugins}"
       SelectedItem="{CompiledBinding SelectedPlugin}"
       SelectionMode="Single"
-      Classes="ItemsDragAndDrop"
-      Height="295">
+      Classes="ItemsDragAndDrop">
       <ListBox.ItemTemplate>
         <DataTemplate DataType="vm:PluginInfo">
           <DockPanel VerticalAlignment="Center">
             <icons:Icon Classes="PluginDragHandle" FontSize="10" Value="mdi-drag-vertical"
-            Margin="0 0 5 0" Cursor="Hand"
+            Margin="0 0 4 0" Cursor="Hand"
             HorizontalAlignment="Center"/>
-            <Border Margin="0" Padding="5"
+            <Border Margin="0" Padding="4"
             Background="{DynamicResource SurfaceLightBrush}"
             CornerRadius="3">
             <DockPanel VerticalAlignment="Center">
-              <Border CornerRadius="10" Width="20" Height="20"
+              <Border CornerRadius="9" Width="18" Height="18"
               Background="{DynamicResource PrimaryLightBrush}" Margin="0 0 8 0"
               VerticalAlignment="Center" HorizontalAlignment="Center">
-              <TextBlock FontSize="12" TextAlignment="Center" VerticalAlignment="Center"
+              <TextBlock FontSize="11" TextAlignment="Center" VerticalAlignment="Center"
               Foreground="{DynamicResource TextSecondaryBrush}"
               Text="{CompiledBinding Index}"/>
             </Border>
@@ -61,7 +56,7 @@ x:DataType="vm:MainViewModel">
             IsChecked="{CompiledBinding Enabled}"
             Content="{CompiledBinding Name}"
             Foreground="{DynamicResource TextSecondaryBrush}"
-            FontSize="14">
+            FontSize="13">
             <CheckBox.Styles>
               <Style Selector="CheckBox">
                 <Setter Property="Padding" Value="4 0"/>
@@ -78,26 +73,26 @@ x:DataType="vm:MainViewModel">
   </DataTemplate>
 </ListBox.ItemTemplate>
 </ListBox>
-</StackPanel>
+</DockPanel>
 </Border>
 <!-- 中间操作按钮 -->
 <StackPanel Grid.Column="1"
 Orientation="Vertical"
-Spacing="15"
+Spacing="12"
 HorizontalAlignment="Center"
 VerticalAlignment="Center">
 <u:IconButton Icon="mdi-chevron-right"
 Command="{CompiledBinding ToAvaliableCommand}"
-Width="40"
-Height="40"
-CornerRadius="20"
+Width="34"
+Height="34"
+CornerRadius="17"
 Background="{DynamicResource PrimaryLightBrush}"
 Foreground="{DynamicResource PrimaryBrush}"/>
 <u:IconButton Icon="mdi-chevron-left"
 Command="{CompiledBinding ToPluginsCommand}"
-Width="40"
-Height="40"
-CornerRadius="20"
+Width="34"
+Height="34"
+CornerRadius="17"
 Background="{DynamicResource PrimaryLightBrush}"
 Foreground="{DynamicResource PrimaryBrush}"/>
 </StackPanel>
@@ -108,33 +103,28 @@ CornerRadius="8"
 BorderBrush="{DynamicResource BorderBrush}"
 BorderThickness="1"
 Effect="{DynamicResource SmallShadow}">
-<StackPanel>
-  <Label Padding="5"
-  FontSize="13"
-  FontWeight="Medium"
-  Foreground="{DynamicResource TextPrimaryBrush}"
-  Background="{DynamicResource SurfaceLightBrush}"
+<DockPanel>
+  <Label DockPanel.Dock="Top" Classes="list-header"
   Content="{x:Static lang:Resources.AvailablePlugins}"/>
   <ListBox x:Name="AvaliableListBox"
   Margin="0"
-  Padding="5"
+  Padding="4"
   BorderThickness="0"
   Background="Transparent"
   ItemsSource="{CompiledBinding Avaliable}"
   SelectedItem="{CompiledBinding SelectedAvaliable}"
-  SelectionMode="Single"
-  Height="295">
+  SelectionMode="Single">
   <ListBox.ItemTemplate>
     <DataTemplate>
       <Border Margin="0"
-      Padding="10"
+      Padding="8 6"
       Background="{DynamicResource SurfaceLightBrush}"
       CornerRadius="3"
       Cursor="Hand">
       <Label Content="{CompiledBinding Name}"
       Foreground="{DynamicResource TextSecondaryBrush}"
-      FontSize="14"
-      Padding="4 0"/>
+      FontSize="13"
+      Padding="0" VerticalContentAlignment="Center"/>
     </Border>
   </DataTemplate>
 </ListBox.ItemTemplate>
@@ -147,17 +137,20 @@ Effect="{DynamicResource SmallShadow}">
   </Style>
 </ListBox.Styles>
 </ListBox>
-</StackPanel>
+</DockPanel>
 </Border>
 </Grid>
 <!-- 底部操作按钮 -->
-<DockPanel HorizontalAlignment="Right">
-  <u:IconButton Icon="mdi-refresh"
-  Content="{x:Static lang:Resources.Reset}"
-  Command="{CompiledBinding ResetCommand}"/>
-  <u:IconButton Icon="mdi-content-save"
-  Content="{x:Static lang:Resources.Save}"
-  Command="{CompiledBinding SaveCommand}"/>
-</DockPanel>
+<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8"
+HorizontalAlignment="Right">
+<u:IconButton Icon="mdi-refresh"
+Content="{x:Static lang:Resources.Reset}"
+Command="{CompiledBinding ResetCommand}"
+Height="32"/>
+<u:IconButton Icon="mdi-content-save"
+Content="{x:Static lang:Resources.Save}"
+Command="{CompiledBinding SaveCommand}"
+Height="32"/>
 </StackPanel>
+</Grid>
 </UserControl>
