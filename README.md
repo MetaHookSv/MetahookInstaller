@@ -103,9 +103,9 @@ Use Windows x64 with the .NET 8 SDK. NativeAOT publishing also requires the Visu
 From the repository root:
 
 ```powershell
-dotnet restore MetahookInstaller.sln
-dotnet build MetahookInstaller.sln -c Debug --no-restore
-dotnet build MetahookInstaller.sln -c Release --no-restore
+dotnet restore MetahookInstaller.slnx
+dotnet build MetahookInstaller.slnx -c Debug --no-restore
+dotnet build MetahookInstaller.slnx -c Release --no-restore
 dotnet run --project src\MetahookInstallerAvalonia.Desktop
 dotnet run --project src\MetahookInstallerCLI -- -appid 225840
 ```

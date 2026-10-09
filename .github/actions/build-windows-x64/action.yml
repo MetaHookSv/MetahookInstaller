@@ -16,11 +16,11 @@ runs:
 
     - name: Restore
       shell: cmd
-      run: dotnet restore MetahookInstaller.sln
+      run: dotnet restore MetahookInstaller.slnx
 
     - name: Build
       shell: cmd
-      run: dotnet build MetahookInstaller.sln -c Release --no-restore
+      run: dotnet build MetahookInstaller.slnx -c Release --no-restore
 
     - name: Test
       shell: cmd
