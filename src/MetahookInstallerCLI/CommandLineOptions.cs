@@ -13,13 +13,15 @@ public sealed record CommandLineOptions(
     bool ShowHelp,
     bool DescribeTarget = false,
     bool IncludeDebugSymbols = false,
-    bool PluginsOnly = false)
+    bool PluginsOnly = false,
+    string? SourceDirectory = null)
 {
     public const string Usage =
-        "Usage: MetahookInstallerCLI -appid <appid> [-gamedir <gamedir>] [-moddir <moddir>] [-plugins-only] [-uninstall | -describe-target | -include-debug-symbols]\n" +
+        "Usage: MetahookInstallerCLI -appid <appid> [-gamedir <gamedir>] [-moddir <moddir>] [-source <dir>] [-plugins-only] [-uninstall | -describe-target | -include-debug-symbols]\n" +
         "  -appid <appid>      Steam app ID of the game, e.g. 225840 (Sven Co-op) or 70 (Half-Life).\n" +
         "  -gamedir <gamedir>  Game root directory. Defaults to the Steam install directory of the app.\n" +
         "  -moddir <moddir>    Mod directory under the game root. Defaults to the app's base mod.\n" +
+        "  -source <dir>       Payload directory to deploy (defaults to install/output next to this executable).\n" +
         "  -uninstall          Remove MetaHook instead of installing it.\n" +
         "  -describe-target    Print target JSON without installing (assumes both launchers in payload).\n" +
         "  -include-debug-symbols  Also install root PDB files.\n" +
@@ -28,7 +30,7 @@ public sealed record CommandLineOptions(
 
     private static readonly HashSet<string> ValueKeys = new(StringComparer.OrdinalIgnoreCase)
     {
-        "appid", "gamedir", "moddir",
+        "appid", "gamedir", "moddir", "source",
     };
 
     private static readonly HashSet<string> HelpKeys = new(StringComparer.OrdinalIgnoreCase)
@@ -108,6 +110,8 @@ public sealed record CommandLineOptions(
             throw new ArgumentException("-uninstall, -describe-target and -include-debug-symbols cannot be combined.");
         if (uninstall && pluginsOnly)
             throw new ArgumentException("-plugins-only cannot be combined with -uninstall.");
+        if (uninstall && values.ContainsKey("source"))
+            throw new ArgumentException("-source cannot be combined with -uninstall.");
 
         return new CommandLineOptions(
             appId,
@@ -117,7 +121,8 @@ public sealed record CommandLineOptions(
             false,
             describeTarget,
             includeDebugSymbols,
-            pluginsOnly);
+            pluginsOnly,
+            values.GetValueOrDefault("source"));
     }
 
     // findGameDirectory is only queried when -gamedir is omitted.

@@ -7,23 +7,30 @@ namespace MetahookInstaller;
 public static class InstallPayload
 {
     // Release builds only look next to the executable; Debug builds also search its ancestors.
-    public static string? FindApplicationSourceDirectory(bool pluginsOnly = false)
+    // An explicitSource overrides the search so callers with a payload elsewhere need no lookup.
+    public static string? FindApplicationSourceDirectory(bool pluginsOnly = false, string? explicitSource = null)
     {
 #if DEBUG
-        return FindSourceDirectory(AppContext.BaseDirectory, true, pluginsOnly);
+        return FindSourceDirectory(AppContext.BaseDirectory, true, pluginsOnly, explicitSource);
 #else
-        return FindSourceDirectory(AppContext.BaseDirectory, false, pluginsOnly);
+        return FindSourceDirectory(AppContext.BaseDirectory, false, pluginsOnly, explicitSource);
 #endif
     }
 
-    public static string? FindSourceDirectory(string applicationDirectory, bool searchParents, bool pluginsOnly = false)
+    public static string? FindSourceDirectory(string applicationDirectory, bool searchParents,
+        bool pluginsOnly = false, string? explicitSource = null)
     {
+        if (explicitSource != null)
+        {
+            var explicitPath = Path.GetFullPath(explicitSource);
+            return IsSourceDirectory(explicitPath, pluginsOnly) ? explicitPath : null;
+        }
+
         DirectoryInfo? directory = new(Path.GetFullPath(applicationDirectory));
         while (directory != null)
         {
             var source = Path.Combine(directory.FullName, "install", "output");
-            if (pluginsOnly ? HasPlugins(source) :
-                File.Exists(Path.Combine(source, "MetaHook.exe")) || File.Exists(Path.Combine(source, "MetaHook_blob.exe")))
+            if (IsSourceDirectory(source, pluginsOnly))
                 return source;
             if (!searchParents)
                 break;
@@ -31,6 +38,11 @@ public static class InstallPayload
         }
         return null;
     }
+
+    // A payload directory holds either the plugin tree or the launcher the deployment needs.
+    private static bool IsSourceDirectory(string source, bool pluginsOnly) =>
+        pluginsOnly ? HasPlugins(source) :
+        File.Exists(Path.Combine(source, "MetaHook.exe")) || File.Exists(Path.Combine(source, "MetaHook_blob.exe"));
 
     public static string GetLauncherPath(string gameDirectory, string modDirectory, bool isNonBlobEngine)
     {

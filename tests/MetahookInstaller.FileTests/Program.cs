@@ -77,6 +77,14 @@ var cases = new (string Name, Action<Fixture> Run)[]
         Equal(true, CommandLineOptions.Parse(["-appid", "70", "-plugins-only", "-include-debug-symbols"]).IncludeDebugSymbols);
         Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "70", "-plugins-only", "-uninstall"]));
     }),
+    ("CLI accepts an explicit source directory and rejects it with uninstall", _ =>
+    {
+        var options = CommandLineOptions.Parse(["-appid", "70", "-SOURCE", "D:/payload", "-plugins-only"]);
+        Equal("D:/payload", options.SourceDirectory);
+        Equal(true, options.PluginsOnly);
+        Equal(null, CommandLineOptions.Parse(["-appid", "70"]).SourceDirectory);
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "70", "-uninstall", "-source", "D:/payload"]));
+    }),
     ("CLI plugin query and install work without payload launchers or shortcuts", fixture =>
     {
         var game = fixture.Game("valve");
@@ -103,6 +111,34 @@ var cases = new (string Name, Action<Fixture> Run)[]
         Equal(1, invalid.ExitCode);
         Equal("", invalid.Output);
         Equal(true, invalid.Error.Contains("Install MetaHook"));
+    }),
+    ("CLI installs from an explicit source when no install/output is nearby", fixture =>
+    {
+        var game = fixture.Game("valve");
+        fixture.NormalEngine();
+        fixture.Payload();
+        fixture.CopyCli();
+        // Move the payload out of the proximity search so only -source can reach it.
+        var relocated = fixture.Directory("package/relocated");
+        System.IO.Directory.Move(fixture.Path("package/install"), System.IO.Path.Combine(relocated, "install"));
+        var payload = System.IO.Path.Combine(relocated, "install", "output");
+
+        var missing = fixture.RunCli("-appid", "70", "-gamedir", game, "-moddir", "valve", "-include-debug-symbols");
+        Equal(1, missing.ExitCode);
+        Equal(true, missing.Error.Contains("install/output folder cannot be located"));
+        Absent(fixture.Path("game/valve/metahook"));
+
+        var install = fixture.RunCli("-appid", "70", "-gamedir", game, "-moddir", "valve",
+            "-source", payload, "-include-debug-symbols");
+        Equal("", install.Error);
+        Equal(0, install.ExitCode);
+        Exists(fixture.Path("game/valve/metahook/plugins/Plugin.dll"));
+        Equal("normal", File.ReadAllText(fixture.Path("game/MetaHook.exe")));
+
+        var invalid = fixture.RunCli("-appid", "70", "-gamedir", game, "-moddir", "valve",
+            "-source", fixture.Directory("empty payload source"));
+        Equal(1, invalid.ExitCode);
+        Equal(true, invalid.Error.Contains("does not hold a deployable MetaHook installation"));
     }),
     ("Locked plugin deployment reports failure", fixture =>
     {
@@ -202,6 +238,19 @@ var cases = new (string Name, Action<Fixture> Run)[]
         fixture.Write("package/Build/MetaHook.exe", "old");
         fixture.Directory("package/install/output");
         Equal<string?>(null, InstallPayload.FindSourceDirectory(fixture.Path("package"), false));
+    }),
+    ("An explicit source overrides the search wherever the payload lives", fixture =>
+    {
+        var source = fixture.Payload();
+        var application = fixture.Directory("elsewhere/app");
+        // Only the explicit path is consulted: the search nearby finds nothing,
+        // a valid explicit payload is accepted, and an invalid one is rejected.
+        Equal<string?>(null, InstallPayload.FindSourceDirectory(application, false));
+        Equal(source, InstallPayload.FindSourceDirectory(application, false, explicitSource: source));
+        Equal<string?>(null, InstallPayload.FindSourceDirectory(application, false,
+            explicitSource: fixture.Directory("elsewhere/empty")));
+        Equal(source, InstallPayload.FindSourceDirectory(fixture.Path("unrelated root"),
+            false, pluginsOnly: true, explicitSource: source));
     }),
     ("A blob-only payload is accepted", fixture =>
     {

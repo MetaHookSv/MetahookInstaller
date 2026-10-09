@@ -62,9 +62,10 @@ try
         return 0;
     }
 
-    var source = InstallPayload.FindApplicationSourceDirectory(options.PluginsOnly)
-        ?? throw new DirectoryNotFoundException(
-            "The install/output folder cannot be located next to MetahookInstallerCLI.exe. Please extract the complete archive before running the programme.");
+    var source = InstallPayload.FindApplicationSourceDirectory(options.PluginsOnly, options.SourceDirectory)
+        ?? throw new DirectoryNotFoundException(options.SourceDirectory != null
+            ? $"The payload directory does not hold a deployable MetaHook installation: {Path.GetFullPath(options.SourceDirectory)}"
+            : "The install/output folder cannot be located next to MetahookInstallerCLI.exe. Please extract the complete archive before running the programme.");
     if (options.PluginsOnly)
     {
         var existingLauncher = MetahookSetup.InstallPlugins(source, target.GameDirectory, target.ModDirectory);
