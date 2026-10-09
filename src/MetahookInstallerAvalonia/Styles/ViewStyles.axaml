@@ -3,21 +3,26 @@
 xmlns:icons="https://github.com/projektanker/icons.avalonia"
         xmlns:behaviors="using:MetahookInstallerAvalonia.Behavior"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-
+  <!--
+    间距/字号规范（紧凑且统一）：
+    - 页面内边距 16，区块间距 12，标签与控件间距 4
+    - 控件高度 32，圆角 4/6/8（小/中/大）
+    - 字号：正文 13，标签 12，列表头 13 Medium
+  -->
     <Styles.Resources>
         <behaviors:ItemsListBoxDropHandler x:Key="ItemsDropHandler" />
     </Styles.Resources>
  <!-- 基础样式 -->
         <Style Selector="TabControl">
-            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Margin" Value="8"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="TabItem">
-            <Setter Property="Padding" Value="15 20"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="14 14"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Margin" Value="0 2 0 0"/>
+            <Setter Property="Margin" Value="0 1 0 0"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -28,7 +33,8 @@ xmlns:icons="https://github.com/projektanker/icons.avalonia"
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style Selector="TextBox, ComboBox">
-            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Padding" Value="8 4"/>
+            <Setter Property="MinHeight" Value="32"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
             <Setter Property="CornerRadius" Value="4"/>
@@ -37,19 +43,22 @@ xmlns:icons="https://github.com/projektanker/icons.avalonia"
         <Style Selector="TextBox:focus, ComboBox:focus">
             <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
         </Style>
-        <Style Selector="TextBlock.header">
-            <Setter Property="FontSize" Value="14"/>
+        <!-- 控件标签：位于控件之上，左对齐控件内联时用 VerticalAlignment=Center + Margin=0 -->
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Margin" Value="0 0 4 0"/>
+        </Style>
+        <!-- 列表标题栏（编辑页列表头） -->
+        <Style Selector="Label.list-header">
+            <Setter Property="Padding" Value="8 6"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0 15 0 5"/>
-        </Style>
-        <Style Selector="TextBlock.label">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0 0 0 5"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceLightBrush}"/>
         </Style>
         <Style Selector="ListBoxItem">
-            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Margin" Value="0 0 0 2"/>
         </Style>
         <Style Selector="u|IconButton">
             <Setter Property="Background" Value="Transparent"/>
