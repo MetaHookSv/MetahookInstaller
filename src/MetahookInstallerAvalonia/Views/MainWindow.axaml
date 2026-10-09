@@ -4,6 +4,7 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 xmlns:u="https://irihi.tech/ursa"
+xmlns:icons="https://github.com/projektanker/icons.avalonia"
 xmlns:vm="clr-namespace:MetahookInstallerAvalonia.ViewModels"
 xmlns:views="clr-namespace:MetahookInstallerAvalonia.Views"
 xmlns:lang="clr-namespace:MetahookInstallerAvalonia.Lang"
@@ -122,17 +123,32 @@ CornerRadius="8">
           <MenuFlyout>
             <MenuItem Command="{CompiledBinding ChangeThemeCommand}" CommandParameter="System">
               <MenuItem.Header>
-                <Label Content="{x:Static lang:Resources.Theme_System}"/>
+                <Grid ColumnDefinitions="18,*">
+                  <icons:Icon Value="mdi-check" FontSize="13" VerticalAlignment="Center"
+                  Foreground="{DynamicResource PrimaryBrush}"
+                  IsVisible="{CompiledBinding IsSystemTheme}"/>
+                  <Label Grid.Column="1" Content="{x:Static lang:Resources.Theme_System}"/>
+                </Grid>
               </MenuItem.Header>
             </MenuItem>
             <MenuItem Command="{CompiledBinding ChangeThemeCommand}" CommandParameter="Light">
               <MenuItem.Header>
-                <Label Content="{x:Static lang:Resources.Theme_Light}"/>
+                <Grid ColumnDefinitions="18,*">
+                  <icons:Icon Value="mdi-check" FontSize="13" VerticalAlignment="Center"
+                  Foreground="{DynamicResource PrimaryBrush}"
+                  IsVisible="{CompiledBinding IsLightTheme}"/>
+                  <Label Grid.Column="1" Content="{x:Static lang:Resources.Theme_Light}"/>
+                </Grid>
               </MenuItem.Header>
             </MenuItem>
             <MenuItem Command="{CompiledBinding ChangeThemeCommand}" CommandParameter="Dark">
               <MenuItem.Header>
-                <Label Content="{x:Static lang:Resources.Theme_Dark}"/>
+                <Grid ColumnDefinitions="18,*">
+                  <icons:Icon Value="mdi-check" FontSize="13" VerticalAlignment="Center"
+                  Foreground="{DynamicResource PrimaryBrush}"
+                  IsVisible="{CompiledBinding IsDarkTheme}"/>
+                  <Label Grid.Column="1" Content="{x:Static lang:Resources.Theme_Dark}"/>
+                </Grid>
               </MenuItem.Header>
             </MenuItem>
           </MenuFlyout>
