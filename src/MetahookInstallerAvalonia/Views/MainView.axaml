@@ -7,6 +7,7 @@ xmlns:vm="clr-namespace:MetahookInstallerAvalonia.ViewModels"
 xmlns:lang="clr-namespace:MetahookInstallerAvalonia.Lang"
 xmlns:views="clr-namespace:MetahookInstallerAvalonia.Views"
 xmlns:u="https://irihi.tech/ursa"
+xmlns:icons="https://github.com/projektanker/icons.avalonia"
 xmlns:behaviors="using:MetahookInstallerAvalonia.Behavior"
 mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="450"
 x:Class="MetahookInstallerAvalonia.Views.MainView"
@@ -35,7 +36,7 @@ x:DataType="vm:MainViewModel">
     <TabItem>
       <TabItem.Header>
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <PathIcon Data="{StaticResource install_app_list}" Width="16" Height="16"/>
+          <icons:Icon Value="mdi-download-box" FontSize="16"/>
           <Label Content="{x:Static lang:Resources.Tab_Install}"/>
         </StackPanel>
       </TabItem.Header>
@@ -45,7 +46,7 @@ x:DataType="vm:MainViewModel">
     <TabItem IsEnabled="{CompiledBinding EditorUsable}">
       <TabItem.Header>
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <PathIcon Data="{StaticResource edit_regular}" Width="16" Height="16"/>
+          <icons:Icon Value="mdi-pencil" FontSize="16"/>
           <Label Content="{x:Static lang:Resources.Tab_Edit}"/>
         </StackPanel>
       </TabItem.Header>
@@ -55,7 +56,7 @@ x:DataType="vm:MainViewModel">
     <TabItem IsEnabled="{CompiledBinding EditorUsable}">
       <TabItem.Header>
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <PathIcon Data="{StaticResource open_folder}" Width="16" Height="16"/>
+          <icons:Icon Value="mdi-folder-open" FontSize="16"/>
           <Label Content="{x:Static lang:Resources.Tab_Open}"/>
         </StackPanel>
       </TabItem.Header>

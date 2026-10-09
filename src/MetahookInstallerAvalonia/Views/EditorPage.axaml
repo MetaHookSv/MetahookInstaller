@@ -4,6 +4,7 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 xmlns:u="https://irihi.tech/ursa"
+xmlns:icons="https://github.com/projektanker/icons.avalonia"
 xmlns:vm="clr-namespace:MetahookInstallerAvalonia.ViewModels"
 xmlns:lang="clr-namespace:MetahookInstallerAvalonia.Lang"
 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="400"
@@ -42,7 +43,7 @@ x:DataType="vm:MainViewModel">
       <ListBox.ItemTemplate>
         <DataTemplate DataType="vm:PluginInfo">
           <DockPanel VerticalAlignment="Center">
-            <PathIcon Classes="PluginDragHandle" Width="10" Data="{StaticResource dotmatrix_4x6}"
+            <icons:Icon Classes="PluginDragHandle" FontSize="10" Value="mdi-drag-vertical"
             Margin="0 0 5 0" Cursor="Hand"
             HorizontalAlignment="Center"/>
             <Border Margin="0" Padding="5"
@@ -85,14 +86,14 @@ Orientation="Vertical"
 Spacing="15"
 HorizontalAlignment="Center"
 VerticalAlignment="Center">
-<u:IconButton Icon="{StaticResource arrow_right_regular}"
+<u:IconButton Icon="mdi-chevron-right"
 Command="{CompiledBinding ToAvaliableCommand}"
 Width="40"
 Height="40"
 CornerRadius="20"
 Background="{DynamicResource PrimaryLightBrush}"
 Foreground="{DynamicResource PrimaryBrush}"/>
-<u:IconButton Icon="{StaticResource arrow_left_regular}"
+<u:IconButton Icon="mdi-chevron-left"
 Command="{CompiledBinding ToPluginsCommand}"
 Width="40"
 Height="40"
@@ -151,10 +152,10 @@ Effect="{DynamicResource SmallShadow}">
 </Grid>
 <!-- 底部操作按钮 -->
 <DockPanel HorizontalAlignment="Right">
-  <u:IconButton Icon="{StaticResource reload_regular}"
+  <u:IconButton Icon="mdi-refresh"
   Content="{x:Static lang:Resources.Reset}"
   Command="{CompiledBinding ResetCommand}"/>
-  <u:IconButton Icon="{StaticResource save_regular}"
+  <u:IconButton Icon="mdi-content-save"
   Content="{x:Static lang:Resources.Save}"
   Command="{CompiledBinding SaveCommand}"/>
 </DockPanel>

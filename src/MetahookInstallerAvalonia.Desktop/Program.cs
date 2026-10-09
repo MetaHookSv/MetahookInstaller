@@ -1,4 +1,6 @@
 ﻿using Avalonia;
+using Optris.Icons.Avalonia;
+using Optris.Icons.Avalonia.MaterialDesign;
 using ReactiveUI.Avalonia;
 using System;
 using System.Runtime.Versioning;
@@ -17,9 +19,12 @@ class Program
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        IconProvider.Current.Register<MaterialDesignIconProvider>();
+        return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace()
             .UseReactiveUI(_ => { });
+    }
 }

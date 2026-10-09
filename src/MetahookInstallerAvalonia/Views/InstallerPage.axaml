@@ -36,7 +36,7 @@ x:DataType="vm:MainViewModel">
     CancelCommand="{CompiledBinding ToastWarningCommand}"
     CancelCommandParameter="{x:Static lang:Resources.Cancelled}">
     <u:IconButton
-    Icon="{StaticResource install_app_regular}"
+    Icon="mdi-package-variant"
     Content="{x:Static lang:Resources.Install}"/>
   </u:PopConfirm>
   <u:PopConfirm Grid.Column="3"
@@ -47,7 +47,7 @@ x:DataType="vm:MainViewModel">
   CancelCommand="{CompiledBinding ToastWarningCommand}"
   CancelCommandParameter="{x:Static lang:Resources.Cancelled}">
   <u:IconButton
-  Icon="{StaticResource uninstall_app_regular}"
+  Icon="mdi-package-variant-minus"
   Content="{x:Static lang:Resources.Uninstall}"/>
 </u:PopConfirm>
 </Grid>
