@@ -1,0 +1,14 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/MetahookInstallerAvalonia.Desktop/MetahookInstallerAvalonia.Desktop.csproj" />
+    <Project Path="src/MetahookInstallerAvalonia/MetahookInstallerAvalonia.csproj" />
+    <Project Path="src/MetahookInstallerCLI/MetahookInstallerCLI.csproj" />
+    <Project Path="src/MetahookInstallerCore/MetahookInstallerCore.csproj" />
+    <Project Path="tests/MetahookInstaller.FileTests/MetahookInstaller.FileTests.csproj" />
+  </Folder>
+</Solution>

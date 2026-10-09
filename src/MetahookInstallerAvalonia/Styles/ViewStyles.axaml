@@ -1,22 +1,28 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:u="https://irihi.tech/ursa"
+xmlns:icons="https://github.com/projektanker/icons.avalonia"
         xmlns:behaviors="using:MetahookInstallerAvalonia.Behavior"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-
+  <!--
+    Fluent 2 规范（紧凑版）：
+    - 页面内边距 16，区块间距 12，标签与控件间距 4
+    - 控件高度 32，圆角 4（控件）/ 8（卡片）
+    - 状态：静止透明 → 悬停细填充 → 按下更深的细填充（150ms 过渡）
+  -->
     <Styles.Resources>
         <behaviors:ItemsListBoxDropHandler x:Key="ItemsDropHandler" />
     </Styles.Resources>
  <!-- 基础样式 -->
         <Style Selector="TabControl">
-            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Margin" Value="8"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="TabItem">
-            <Setter Property="Padding" Value="15 20"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="14 14"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Margin" Value="0 2 0 0"/>
+            <Setter Property="Margin" Value="0 1 0 0"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -27,7 +33,8 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style Selector="TextBox, ComboBox">
-            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Padding" Value="8 4"/>
+            <Setter Property="MinHeight" Value="32"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
             <Setter Property="CornerRadius" Value="4"/>
@@ -36,25 +43,50 @@
         <Style Selector="TextBox:focus, ComboBox:focus">
             <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
         </Style>
-        <Style Selector="TextBlock.header">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0 15 0 5"/>
-        </Style>
+        <!-- 控件标签：位于控件之上，左对齐控件内联时用 VerticalAlignment=Center + Margin=0 -->
         <Style Selector="TextBlock.label">
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0 0 0 5"/>
+            <Setter Property="Margin" Value="0 0 4 0"/>
         </Style>
+        <!-- 列表标题栏：Fluent 分节标题，纯文本 + 字重 -->
+        <Style Selector="Label.list-header">
+            <Setter Property="Padding" Value="10 8 8 4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <!-- 列表容器交给自定义项样式处理背景，主题自带的悬停/选中底色置空 -->
         <Style Selector="ListBoxItem">
-            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Margin" Value="0 0 0 2"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="4"/>
         </Style>
+        <Style Selector="ListBoxItem:pointerover, ListBoxItem:selected">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <!-- Ursa 的 IconButton 悬停/按下底色由模板内 Border#PART_Background 绘制、
+             经 ButtonDefaultPointerover/PressedBackground 资源键取色（默认细填充由
+             App.axaml 覆盖为 Fluent 令牌）。强调色按钮需要单独改模板部件。 -->
         <Style Selector="u|IconButton">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <!-- 强调色浅底按钮：移入/移出等主操作 -->
+        <Style Selector="u|IconButton.subtle-accent /template/ Border#PART_Background">
+            <Setter Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+        </Style>
+        <Style Selector="u|IconButton.subtle-accent:pointerover /template/ Border#PART_Background">
+            <Setter Property="Background" Value="{DynamicResource PrimaryLightHoverBrush}"/>
+        </Style>
+        <Style Selector="u|IconButton.subtle-accent:pressed /template/ Border#PART_Background">
+            <Setter Property="Background" Value="{DynamicResource PrimaryLightHoverBrush}"/>
+        </Style>
+        <Style Selector="u|IconButton.subtle-accent">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
         </Style>
         <StyleInclude Source="avares://Xaml.Behaviors.Interactions.DragAndDrop/Styles.axaml" />
         <Style Selector="ListBox.ItemsDragAndDrop">
@@ -72,7 +104,7 @@
         <Style Selector="ListBox.ItemsDragAndDrop ListBoxItem">
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
-        <Style Selector="ListBox.ItemsDragAndDrop ListBoxItem PathIcon.PluginDragHandle">
+        <Style Selector="ListBox.ItemsDragAndDrop ListBoxItem icons|Icon.PluginDragHandle">
       <Setter Property="(Interaction.Behaviors)">
         <BehaviorCollectionTemplate>
           <BehaviorCollection>

@@ -12,15 +12,15 @@ runs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '10.0.x'
 
     - name: Restore
       shell: cmd
-      run: dotnet restore MetahookInstaller.sln
+      run: dotnet restore MetahookInstaller.slnx
 
     - name: Build
       shell: cmd
-      run: dotnet build MetahookInstaller.sln -c Release --no-restore
+      run: dotnet build MetahookInstaller.slnx -c Release --no-restore
 
     - name: Test
       shell: cmd
@@ -30,13 +30,14 @@ runs:
       shell: cmd
       run: dotnet publish src\MetahookInstallerAvalonia.Desktop\MetahookInstallerAvalonia.Desktop.csproj -p:PublishProfile=FolderProfile -o MetahookInstaller-Output
 
-    - name: Publish CLI (single file)
+    - name: Publish CLI (Native AOT)
       shell: cmd
-      run: dotnet publish src\MetahookInstallerCLI\MetahookInstallerCLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=false -p:PublishTrimmed=true -p:DebugType=None -p:DebugSymbols=false -o build\cli-publish
+      run: dotnet publish src\MetahookInstallerCLI\MetahookInstallerCLI.csproj -c Release -r win-x64 -o build\cli-publish
 
     - name: Prepare output
       shell: pwsh
       run: |
+        Get-ChildItem -LiteralPath 'build\cli-publish' -Filter *.pdb -Recurse | Remove-Item -Force
         Move-Item -LiteralPath 'MetahookInstaller-Output\MetahookInstallerAvalonia.Desktop.exe' -Destination 'MetahookInstaller-Output\MetahookInstaller.exe' -Force
         $cliFiles = @(Get-ChildItem -LiteralPath 'build\cli-publish' -Recurse -File)
         if ($cliFiles.Count -ne 1 -or $cliFiles[0].Name -ne 'MetahookInstallerCLI.exe') {

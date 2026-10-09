@@ -300,6 +300,42 @@ public class MainViewModel : ViewModelBase
     private readonly ICommand _changeTheme;
     public ICommand ChangeThemeCommand => _changeTheme;
 
+    // 与 ./theme 设置文件保持同步；归一化规则与 App.OnFrameworkInitializationCompleted 一致。
+    private string _currentTheme = ReadThemeSetting();
+    public string CurrentTheme
+    {
+        get => _currentTheme;
+        private set
+        {
+            if (_currentTheme == value)
+            {
+                return;
+            }
+            this.RaiseAndSetIfChanged(ref _currentTheme, value);
+            this.RaisePropertyChanged(nameof(IsSystemTheme));
+            this.RaisePropertyChanged(nameof(IsLightTheme));
+            this.RaisePropertyChanged(nameof(IsDarkTheme));
+        }
+    }
+    public bool IsSystemTheme => _currentTheme == "System";
+    public bool IsLightTheme => _currentTheme == "Light";
+    public bool IsDarkTheme => _currentTheme == "Dark";
+
+    private static string ReadThemeSetting()
+    {
+        var settingPath = Path.Combine(".", "theme");
+        if (!File.Exists(settingPath))
+        {
+            return "System";
+        }
+        return File.ReadAllText(settingPath).Trim() switch
+        {
+            "Light" => "Light",
+            "Dark" => "Dark",
+            _ => "System",
+        };
+    }
+
     private readonly ICommand _toastWarning;
     public ICommand ToastWarningCommand => _toastWarning;
 
@@ -480,6 +516,12 @@ public class MainViewModel : ViewModelBase
                }
                var settingPath = Path.Combine(".", "theme");
                File.WriteAllText(settingPath, theme);
+               CurrentTheme = theme switch
+               {
+                   "Light" => "Light",
+                   "Dark" => "Dark",
+                   _ => "System",
+               };
            },
            _ => true
         );

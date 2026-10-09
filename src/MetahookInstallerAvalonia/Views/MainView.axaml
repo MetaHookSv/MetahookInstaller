@@ -6,7 +6,7 @@ xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 xmlns:vm="clr-namespace:MetahookInstallerAvalonia.ViewModels"
 xmlns:lang="clr-namespace:MetahookInstallerAvalonia.Lang"
 xmlns:views="clr-namespace:MetahookInstallerAvalonia.Views"
-xmlns:u="https://irihi.tech/ursa"
+xmlns:icons="https://github.com/projektanker/icons.avalonia"
 xmlns:behaviors="using:MetahookInstallerAvalonia.Behavior"
 mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="450"
 x:Class="MetahookInstallerAvalonia.Views.MainView"
@@ -22,21 +22,20 @@ x:DataType="vm:MainViewModel">
   <!-- 亚克力效果层 -->
   <Border Background="{DynamicResource BackgroundAcrylicBrush}"
   CornerRadius="8"
-  Margin="8"
-  Effect="{DynamicResource MediumShadow}">
+  Margin="6"
+  BoxShadow="{DynamicResource WindowShadow}">
   <!-- 内容容器 -->
   <Grid Background="Transparent">
     <TabControl TabStripPlacement="Left"
     Background="Transparent"
     CornerRadius="8"
-    Margin="10"
     SelectedIndex="{CompiledBinding SelectedTabIndex}">
     <!-- 安装标签页 -->
     <TabItem>
       <TabItem.Header>
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <PathIcon Data="{StaticResource install_app_list}" Width="16" Height="16"/>
-          <Label Content="{x:Static lang:Resources.Tab_Install}"/>
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <icons:Icon Value="mdi-download-box" FontSize="16"/>
+          <Label Content="{x:Static lang:Resources.Tab_Install}" Padding="0"/>
         </StackPanel>
       </TabItem.Header>
       <views:InstallerPage />
@@ -44,9 +43,9 @@ x:DataType="vm:MainViewModel">
     <!-- 编辑标签页 -->
     <TabItem IsEnabled="{CompiledBinding EditorUsable}">
       <TabItem.Header>
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <PathIcon Data="{StaticResource edit_regular}" Width="16" Height="16"/>
-          <Label Content="{x:Static lang:Resources.Tab_Edit}"/>
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <icons:Icon Value="mdi-pencil" FontSize="16"/>
+          <Label Content="{x:Static lang:Resources.Tab_Edit}" Padding="0"/>
         </StackPanel>
       </TabItem.Header>
       <views:EditorPage />
@@ -54,42 +53,56 @@ x:DataType="vm:MainViewModel">
     <!-- 打开安装位置 -->
     <TabItem IsEnabled="{CompiledBinding EditorUsable}">
       <TabItem.Header>
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <PathIcon Data="{StaticResource open_folder}" Width="16" Height="16"/>
-          <Label Content="{x:Static lang:Resources.Tab_Open}"/>
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <icons:Icon Value="mdi-folder-open" FontSize="16"/>
+          <Label Content="{x:Static lang:Resources.Tab_Open}" Padding="0"/>
         </StackPanel>
       </TabItem.Header>
-      <StackPanel Spacing="20">
-        <u:Divider HorizontalContentAlignment="Left">
-          <Label Content="{x:Static lang:Resources.Folder_ModContent}"/>
-        </u:Divider>
-        <DockPanel HorizontalAlignment="Left">
-          <Button Content="{x:Static lang:Resources.Folder_Build}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="{}{SOURCE}"/>
-          <Button Content="{x:Static lang:Resources.Folder_Game}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{GAME\}"/>
-          <Button Content="{x:Static lang:Resources.Folder_Installed}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}"/>
-          <Button Content="{x:Static lang:Resources.Folder_Mod}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/metahook"/>
-          <Button Content="{x:Static lang:Resources.Folder_Config}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/metahook/configs"/>
-        </DockPanel>
-        <u:Divider HorizontalContentAlignment="Left">
-          <Label Content="{x:Static lang:Resources.Folder_GameContent}"/>
-        </u:Divider>
-        <DockPanel HorizontalAlignment="Left">
-          <Button Content="{x:Static lang:Resources.Folder_Models}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/models"/>
-          <Button Content="{x:Static lang:Resources.Folder_Player}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/models/player"/>
-          <Button Content="{x:Static lang:Resources.Folder_Sprites}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/sprites"/>
-          <Button Content="{x:Static lang:Resources.Folder_Sound}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/sound"/>
-          <Button Content="{x:Static lang:Resources.Folder_Scripts}" Margin="0 0 8 0"
-          Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/scripts"/>
-        </DockPanel>
+      <StackPanel Margin="16" Spacing="12">
+        <Border Background="{DynamicResource SurfaceBrush}"
+        CornerRadius="8"
+        BorderBrush="{DynamicResource BorderBrush}"
+        BorderThickness="1"
+        BoxShadow="{DynamicResource CardShadow}">
+          <DockPanel>
+            <Label DockPanel.Dock="Top" Classes="list-header"
+            Content="{x:Static lang:Resources.Folder_ModContent}"/>
+            <StackPanel Margin="12" Orientation="Horizontal" HorizontalAlignment="Left" Spacing="8">
+              <Button Content="{x:Static lang:Resources.Folder_Build}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="{}{SOURCE}"/>
+              <Button Content="{x:Static lang:Resources.Folder_Game}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{GAME\}"/>
+              <Button Content="{x:Static lang:Resources.Folder_Installed}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}"/>
+              <Button Content="{x:Static lang:Resources.Folder_Mod}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/metahook"/>
+              <Button Content="{x:Static lang:Resources.Folder_Config}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/metahook/configs"/>
+            </StackPanel>
+          </DockPanel>
+        </Border>
+        <Border Background="{DynamicResource SurfaceBrush}"
+        CornerRadius="8"
+        BorderBrush="{DynamicResource BorderBrush}"
+        BorderThickness="1"
+        BoxShadow="{DynamicResource CardShadow}">
+          <DockPanel>
+            <Label DockPanel.Dock="Top" Classes="list-header"
+            Content="{x:Static lang:Resources.Folder_GameContent}"/>
+            <StackPanel Margin="12" Orientation="Horizontal" HorizontalAlignment="Left" Spacing="8">
+              <Button Content="{x:Static lang:Resources.Folder_Models}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/models"/>
+              <Button Content="{x:Static lang:Resources.Folder_Player}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/models/player"/>
+              <Button Content="{x:Static lang:Resources.Folder_Sprites}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/sprites"/>
+              <Button Content="{x:Static lang:Resources.Folder_Sound}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/sound"/>
+              <Button Content="{x:Static lang:Resources.Folder_Scripts}"
+              Command="{CompiledBinding OpenFolderCommand}" CommandParameter="\{INSTALLED\}/scripts"/>
+            </StackPanel>
+          </DockPanel>
+        </Border>
       </StackPanel>
     </TabItem>
   </TabControl>

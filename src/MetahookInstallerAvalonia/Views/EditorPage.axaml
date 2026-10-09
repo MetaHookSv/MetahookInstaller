@@ -4,6 +4,7 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 xmlns:u="https://irihi.tech/ursa"
+xmlns:icons="https://github.com/projektanker/icons.avalonia"
 xmlns:vm="clr-namespace:MetahookInstallerAvalonia.ViewModels"
 xmlns:lang="clr-namespace:MetahookInstallerAvalonia.Lang"
 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="400"
@@ -12,93 +13,98 @@ x:DataType="vm:MainViewModel">
 <Design.DataContext>
   <vm:MainViewModel />
 </Design.DataContext>
-<StackPanel Spacing="20">
+<UserControl.Styles>
+  <!-- Fluent 列表项：静止透明 → 悬停细填充 → 选中强调色浅底（150ms 过渡） -->
+  <Style Selector="Border.plugin-item, Border.available-item">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="CornerRadius" Value="4"/>
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.15"/>
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="ListBoxItem:pointerover Border.plugin-item, ListBoxItem:pointerover Border.available-item">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillHoverBrush}"/>
+  </Style>
+  <Style Selector="ListBoxItem:selected Border.plugin-item, ListBoxItem:selected Border.available-item">
+    <Setter Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+  </Style>
+</UserControl.Styles>
+<Grid Margin="16" RowDefinitions="*,Auto" RowSpacing="12">
   <!-- 核心布局：左右列表 + 中间按钮 -->
-  <Grid ColumnDefinitions="* 70 *" RowDefinitions="Auto">
+  <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="12">
     <!-- 左侧已启用插件列表 -->
     <Border Grid.Column="0"
     Background="{DynamicResource SurfaceBrush}"
     CornerRadius="8"
     BorderBrush="{DynamicResource BorderBrush}"
     BorderThickness="1"
-    Effect="{DynamicResource SmallShadow}">
-    <StackPanel>
-      <Label Padding="5"
-      FontSize="13"
-      FontWeight="Medium"
-      Foreground="{DynamicResource TextPrimaryBrush}"
-      Background="{DynamicResource SurfaceLightBrush}"
+    BoxShadow="{DynamicResource CardShadow}">
+    <DockPanel>
+      <Label DockPanel.Dock="Top" Classes="list-header"
       Content="{x:Static lang:Resources.EnabledPlugins}"/>
       <ListBox x:Name="PluginListBox"
       Margin="0"
-      Padding="0"
+      Padding="4"
       BorderThickness="0"
       Background="Transparent"
       ItemsSource="{CompiledBinding Plugins}"
       SelectedItem="{CompiledBinding SelectedPlugin}"
       SelectionMode="Single"
-      Classes="ItemsDragAndDrop"
-      Height="295">
+      Classes="ItemsDragAndDrop">
       <ListBox.ItemTemplate>
         <DataTemplate DataType="vm:PluginInfo">
-          <DockPanel VerticalAlignment="Center">
-            <PathIcon Classes="PluginDragHandle" Width="10" Data="{StaticResource dotmatrix_4x6}"
-            Margin="0 0 5 0" Cursor="Hand"
-            HorizontalAlignment="Center"/>
-            <Border Margin="0" Padding="5"
-            Background="{DynamicResource SurfaceLightBrush}"
-            CornerRadius="3">
+          <Border Classes="plugin-item" Padding="2 3">
             <DockPanel VerticalAlignment="Center">
-              <Border CornerRadius="10" Width="20" Height="20"
+              <icons:Icon Classes="PluginDragHandle" FontSize="10" Value="mdi-drag-vertical"
+              Margin="0 0 4 0" Cursor="Hand"
+              HorizontalAlignment="Center"/>
+              <Border CornerRadius="9" Width="18" Height="18"
               Background="{DynamicResource PrimaryLightBrush}" Margin="0 0 8 0"
               VerticalAlignment="Center" HorizontalAlignment="Center">
-              <TextBlock FontSize="12" TextAlignment="Center" VerticalAlignment="Center"
+                <TextBlock FontSize="11" TextAlignment="Center" VerticalAlignment="Center"
+                Foreground="{DynamicResource TextSecondaryBrush}"
+                Text="{CompiledBinding Index}"/>
+              </Border>
+              <CheckBox
+              IsChecked="{CompiledBinding Enabled}"
+              Content="{CompiledBinding Name}"
               Foreground="{DynamicResource TextSecondaryBrush}"
-              Text="{CompiledBinding Index}"/>
-            </Border>
-            <CheckBox
-            IsChecked="{CompiledBinding Enabled}"
-            Content="{CompiledBinding Name}"
-            Foreground="{DynamicResource TextSecondaryBrush}"
-            FontSize="14">
-            <CheckBox.Styles>
-              <Style Selector="CheckBox">
-                <Setter Property="Padding" Value="4 0"/>
-                <Setter Property="Cursor" Value="Hand"/>
-              </Style>
-              <Style Selector="CheckBox:checked">
-                <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
-              </Style>
-            </CheckBox.Styles>
-          </CheckBox>
-        </DockPanel>
-      </Border>
-    </DockPanel>
-  </DataTemplate>
-</ListBox.ItemTemplate>
-</ListBox>
-</StackPanel>
+              FontSize="13">
+              <CheckBox.Styles>
+                <Style Selector="CheckBox">
+                  <Setter Property="Padding" Value="4 0"/>
+                  <Setter Property="Cursor" Value="Hand"/>
+                </Style>
+                <Style Selector="CheckBox:checked">
+                  <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+                </Style>
+              </CheckBox.Styles>
+            </CheckBox>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+    </ListBox.ItemTemplate>
+  </ListBox>
+</DockPanel>
 </Border>
 <!-- 中间操作按钮 -->
 <StackPanel Grid.Column="1"
 Orientation="Vertical"
-Spacing="15"
+Spacing="8"
 HorizontalAlignment="Center"
 VerticalAlignment="Center">
-<u:IconButton Icon="{StaticResource arrow_right_regular}"
+<u:IconButton Icon="mdi-chevron-right"
+Classes="subtle-accent"
 Command="{CompiledBinding ToAvaliableCommand}"
-Width="40"
-Height="40"
-CornerRadius="20"
-Background="{DynamicResource PrimaryLightBrush}"
-Foreground="{DynamicResource PrimaryBrush}"/>
-<u:IconButton Icon="{StaticResource arrow_left_regular}"
+Width="32"
+Height="32"/>
+<u:IconButton Icon="mdi-chevron-left"
+Classes="subtle-accent"
 Command="{CompiledBinding ToPluginsCommand}"
-Width="40"
-Height="40"
-CornerRadius="20"
-Background="{DynamicResource PrimaryLightBrush}"
-Foreground="{DynamicResource PrimaryBrush}"/>
+Width="32"
+Height="32"/>
 </StackPanel>
 <!-- 右侧可用插件列表 -->
 <Border Grid.Column="2"
@@ -106,57 +112,43 @@ Background="{DynamicResource SurfaceBrush}"
 CornerRadius="8"
 BorderBrush="{DynamicResource BorderBrush}"
 BorderThickness="1"
-Effect="{DynamicResource SmallShadow}">
-<StackPanel>
-  <Label Padding="5"
-  FontSize="13"
-  FontWeight="Medium"
-  Foreground="{DynamicResource TextPrimaryBrush}"
-  Background="{DynamicResource SurfaceLightBrush}"
+BoxShadow="{DynamicResource CardShadow}">
+<DockPanel>
+  <Label DockPanel.Dock="Top" Classes="list-header"
   Content="{x:Static lang:Resources.AvailablePlugins}"/>
   <ListBox x:Name="AvaliableListBox"
   Margin="0"
-  Padding="5"
+  Padding="4"
   BorderThickness="0"
   Background="Transparent"
   ItemsSource="{CompiledBinding Avaliable}"
   SelectedItem="{CompiledBinding SelectedAvaliable}"
-  SelectionMode="Single"
-  Height="295">
+  SelectionMode="Single">
   <ListBox.ItemTemplate>
     <DataTemplate>
-      <Border Margin="0"
-      Padding="10"
-      Background="{DynamicResource SurfaceLightBrush}"
-      CornerRadius="3"
-      Cursor="Hand">
-      <Label Content="{CompiledBinding Name}"
-      Foreground="{DynamicResource TextSecondaryBrush}"
-      FontSize="14"
-      Padding="4 0"/>
-    </Border>
-  </DataTemplate>
-</ListBox.ItemTemplate>
-<!-- 列表项选中样式 -->
-<ListBox.Styles>
-  <Style Selector="ListBoxItem:selected /template/ Border">
-    <Setter Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-  </Style>
-</ListBox.Styles>
+      <Border Classes="available-item" Padding="8 5" Cursor="Hand">
+        <Label Content="{CompiledBinding Name}"
+        Foreground="{DynamicResource TextSecondaryBrush}"
+        FontSize="13"
+        Padding="0" VerticalContentAlignment="Center"/>
+      </Border>
+    </DataTemplate>
+  </ListBox.ItemTemplate>
 </ListBox>
-</StackPanel>
+</DockPanel>
 </Border>
 </Grid>
 <!-- 底部操作按钮 -->
-<DockPanel HorizontalAlignment="Right">
-  <u:IconButton Icon="{StaticResource reload_regular}"
-  Content="{x:Static lang:Resources.Reset}"
-  Command="{CompiledBinding ResetCommand}"/>
-  <u:IconButton Icon="{StaticResource save_regular}"
-  Content="{x:Static lang:Resources.Save}"
-  Command="{CompiledBinding SaveCommand}"/>
-</DockPanel>
+<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8"
+HorizontalAlignment="Right">
+<u:IconButton Icon="mdi-refresh"
+Content="{x:Static lang:Resources.Reset}"
+Command="{CompiledBinding ResetCommand}"
+Height="32"/>
+<u:IconButton Icon="mdi-content-save"
+Content="{x:Static lang:Resources.Save}"
+Command="{CompiledBinding SaveCommand}"
+Height="32"/>
 </StackPanel>
+</Grid>
 </UserControl>

@@ -2,13 +2,18 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <!--If you are willing to use Windows/MacOS native APIs you will need to create 3 projects.
-    One for Windows with net8.0-windows TFM, one for MacOS with net8.0-macos and one with net8.0 TFM for Linux.-->
-    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    One for Windows with net10.0-windows TFM, one for MacOS with net10.0-macos and one with net10.0 TFM for Linux.-->
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PublishTrimmed>True</PublishTrimmed>
     <PublishAot>True</PublishAot>
+    <!--Native AOT size settings; kept here so they apply to every publish, profile or not.-->
+    <TrimMode>full</TrimMode>
+    <StripSymbols>true</StripSymbols>
+    <StackTraceSupport>false</StackTraceSupport>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   <PropertyGroup Label="Avalonia">
     <AvaloniaUseCompiledBindingsByDefault>True</AvaloniaUseCompiledBindingsByDefault>
