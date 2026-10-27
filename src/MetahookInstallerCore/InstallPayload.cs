@@ -70,7 +70,11 @@ public static class InstallPayload
         var isSvenCoop = modDirectory.Equals("svencoop", StringComparison.OrdinalIgnoreCase);
         var commonResources = Path.Combine(source, "svencoop");
         if (Directory.Exists(commonResources))
+        {
             CopyDirectory(commonResources, Path.Combine(gameDirectory, modDirectory), preservePluginLists);
+            RemoveStalePluginVariants(Path.Combine(commonResources, "metahook", "plugins"),
+                Path.Combine(gameDirectory, modDirectory, "metahook", "plugins"));
+        }
 
         foreach (var folder in Directory.GetDirectories(source).Where(directory =>
             Path.GetFileName(directory).Equals(modDirectory, StringComparison.OrdinalIgnoreCase) ||
@@ -129,6 +133,31 @@ public static class InstallPayload
                 File.Delete(path);
         }
         return targetLauncher;
+    }
+
+    private static readonly string[] PluginVariantSuffixes = ["_AVX2", "_AVX", "_SSE2", "_SSE"];
+    private static readonly string[] PluginVariantExtensions = [".dll", ".pdb"];
+
+    // Older launchers load <Name>_AVX2.dll (and the other instruction-set variants) ahead of
+    // <Name>.dll, so a variant left by an earlier release would shadow the installed baseline.
+    // Only variants of shipped plugins are removed, and never a variant the payload ships itself.
+    private static void RemoveStalePluginVariants(string sourcePlugins, string targetPlugins)
+    {
+        if (!Directory.Exists(sourcePlugins) || !Directory.Exists(targetPlugins))
+            return;
+        foreach (var plugin in Directory.GetFiles(sourcePlugins, "*.dll"))
+        {
+            var baseName = Path.GetFileNameWithoutExtension(plugin);
+            foreach (var suffix in PluginVariantSuffixes)
+            {
+                foreach (var extension in PluginVariantExtensions)
+                {
+                    var name = baseName + suffix + extension;
+                    if (!File.Exists(Path.Combine(sourcePlugins, name)))
+                        File.Delete(Path.Combine(targetPlugins, name));
+                }
+            }
+        }
     }
 
     private static void CopyDirectory(string source, string destination, bool preservePluginLists = false)

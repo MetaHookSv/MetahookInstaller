@@ -150,6 +150,36 @@ var cases = new (string Name, Action<Fixture> Run)[]
             Throws<IOException>(() => MetahookSetup.InstallPlugins(source, game, "valve"));
         Equal("old", File.ReadAllText(plugin));
     }),
+    ("Deployment removes stale instruction-set variants of shipped plugins only", fixture =>
+    {
+        foreach (var pluginsOnly in new[] { true, false })
+        {
+            var source = fixture.Payload();
+            var game = fixture.Game("valve");
+            fixture.NormalEngine();
+            fixture.Write("game/MetaHook.exe", "installed launcher");
+            fixture.Write("package/install/output/svencoop/metahook/plugins/Shipped.dll", "shipped");
+            fixture.Write("package/install/output/svencoop/metahook/plugins/Shipped_AVX2.dll", "shipped variant");
+            var stale = new[] { "Plugin_AVX2.dll", "Plugin_AVX2.pdb", "PLUGIN_avx.dll", "Plugin_SSE2.dll", "Plugin_SSE.dll" };
+            foreach (var name in stale)
+                fixture.Write("game/valve/metahook/plugins/" + name, "stale");
+            fixture.Write("game/valve/metahook/plugins/Other_AVX2.dll", "third-party variant");
+            fixture.Write("game/valve/metahook/plugins/Shipped_AVX2.dll", "old shipped variant");
+
+            if (pluginsOnly)
+                MetahookSetup.InstallPlugins(source, game, "valve");
+            else
+                MetahookSetup.Install(source, game, "valve");
+
+            foreach (var name in stale)
+                Absent(fixture.Path("game/valve/metahook/plugins/" + name));
+            Equal("plugin", File.ReadAllText(fixture.Path("game/valve/metahook/plugins/Plugin.dll")));
+            Equal("third-party variant", File.ReadAllText(fixture.Path("game/valve/metahook/plugins/Other_AVX2.dll")));
+            Equal("shipped variant", File.ReadAllText(fixture.Path("game/valve/metahook/plugins/Shipped_AVX2.dll")));
+            System.IO.Directory.Delete(fixture.Path("game"), true);
+            System.IO.Directory.Delete(fixture.Path("package"), true);
+        }
+    }),
     ("Describe target selects the same launcher without changing the game", fixture =>
     {
         foreach (var mod in new[] { "svencoop", "valve" })
