@@ -5,6 +5,12 @@ namespace MetahookInstaller;
 
 public static class PortableExecutable
 {
+    private const int CoffHeaderSize = 20;
+    private const int CoffOptionalHeaderSizeOffset = 16;
+    private const int ImportDirectoryOffset32 = 104;
+    private const int ImportDirectoryOffset64 = 120;
+    private const int ImportDescriptorSize = 20;
+
     public static bool IsLegitimatePE(string dllPath)
     {
         if (!File.Exists(dllPath))
@@ -45,9 +51,9 @@ public static class PortableExecutable
     {
         try
         {
-            stream.BaseStream.Position = lfanew + 4 + 20;
+            stream.BaseStream.Position = lfanew + 4 + CoffOptionalHeaderSizeOffset;
             ushort sizeOfOptionalHeader = stream.ReadUInt16();
-            long sectionTableStart = lfanew + 4 + 20 + 2 + sizeOfOptionalHeader;
+            long sectionTableStart = lfanew + 4 + CoffHeaderSize + sizeOfOptionalHeader;
             stream.BaseStream.Position = lfanew + 4 + 2;
             ushort numberOfSections = stream.ReadUInt16();
             for (int i = 0; i < numberOfSections; i++)
@@ -87,7 +93,7 @@ public static class PortableExecutable
                 return false;
             stream.Position = 0x3C;
             int lfanew = reader.ReadInt32();
-            if (lfanew + 4 > stream.Length)
+            if (lfanew < 0 || (long)lfanew + 4 > stream.Length)
                 return false;
             stream.Position = lfanew;
             if (reader.ReadUInt32() != 0x00004550)
@@ -102,15 +108,16 @@ public static class PortableExecutable
             reader.ReadUInt16(); // 跳过 Characteristics
             long optionalHeaderStart = stream.Position;
             bool is64Bit = machine == 0x8664; // 0x8664 表示 x64
-            int dataDirectoryOffset = is64Bit ? 224 : 208;
-            if (optionalHeaderStart + dataDirectoryOffset + 8 > stream.Length)
+            int dataDirectoryOffset = is64Bit ? ImportDirectoryOffset64 : ImportDirectoryOffset32;
+            if (dataDirectoryOffset + 8 > sizeOfOptionalHeader ||
+                optionalHeaderStart + sizeOfOptionalHeader > stream.Length)
                 return false; // 数据目录表位置无效
 
             // 5. 读取导入表在数据目录中的地址（相对虚拟地址 RVA）和大小
             stream.Position = optionalHeaderStart + dataDirectoryOffset;
             uint importTableRva = reader.ReadUInt32(); // 导入表的 RVA
             uint importTableSize = reader.ReadUInt32(); // 导入表大小（若为0则无导入表）
-            if (importTableSize == 0)
+            if (importTableRva == 0 || importTableSize == 0)
                 return false;
 
             // 6. 将 RVA 转换为文件偏移量（需要通过节表计算）
@@ -119,9 +126,13 @@ public static class PortableExecutable
                 return false;
 
             // 7. 遍历导入表中的每个 IMAGE_IMPORT_DESCRIPTOR
-            stream.Position = importTableFileOffset;
-            while (true)
+            long importTableEnd = System.Math.Min(stream.Length, importTableFileOffset + importTableSize);
+            for (long descriptorOffset = importTableFileOffset;
+                descriptorOffset <= importTableEnd - ImportDescriptorSize;
+                descriptorOffset += ImportDescriptorSize)
             {
+                // RVA 和名称解析会移动流位置，每次都从下一个描述符的固定偏移读取。
+                stream.Position = descriptorOffset;
                 // 读取一个导入描述符（简化版，仅关注名称 RVA）
                 uint originalFirstThunk = reader.ReadUInt32();
                 reader.ReadUInt32(); // 跳过 TimeDateStamp

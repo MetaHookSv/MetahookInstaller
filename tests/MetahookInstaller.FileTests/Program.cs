@@ -371,6 +371,76 @@ var cases = new (string Name, Action<Fixture> Run)[]
         Equal("SDL2", File.ReadAllText(fixture.Path("game/SDL2.dll")));
         Equal("SDL3", File.ReadAllText(fixture.Path("game/SDL3.dll")));
     }),
+    ("PE32 and PE32+ import detection maps the section table correctly", fixture =>
+    {
+        fixture.Game("cstrike");
+        foreach (var is64Bit in new[] { false, true })
+        {
+            var engine = fixture.EngineWithImports(is64Bit, "SDL2.dll");
+            Equal(true, PortableExecutable.HasImportedModule(engine, "sdl2.dll"));
+        }
+    }),
+    ("SDL2 is detected after other imported modules in PE32 and PE32+", fixture =>
+    {
+        fixture.Game("cstrike");
+        foreach (var is64Bit in new[] { false, true })
+        {
+            var engine = fixture.EngineWithImports(is64Bit, "KERNEL32.dll", "USER32.dll", "SdL2.DlL");
+            Equal(true, PortableExecutable.HasImportedModule(engine, "SDL2.dll"));
+            Equal(true, PortableExecutable.HasImportedModule(engine, "USER32.dll"));
+            Equal(false, PortableExecutable.HasImportedModule(engine, "SDL3.dll"));
+        }
+    }),
+    ("Import detection rejects missing, truncated and absent import tables", fixture =>
+    {
+        fixture.Game("cstrike");
+        Equal(false, PortableExecutable.HasImportedModule(fixture.Path("missing.dll"), "SDL2.dll"));
+        var engine = fixture.EngineWithImports(false);
+        Equal(false, PortableExecutable.HasImportedModule(engine, "SDL2.dll"));
+        fixture.NormalEngine();
+        Equal(false, PortableExecutable.HasImportedModule(engine, "SDL2.dll"));
+    }),
+    ("Setup replaces existing SDL runtimes with payload hashes when SDL2 is a later import", fixture =>
+    {
+        var source = fixture.Payload();
+        var game = fixture.Game("cstrike");
+        fixture.EngineWithImports(false, "KERNEL32.dll", "USER32.dll", "SDL2.dll");
+        foreach (var name in new[] { "SDL2.dll", "SDL3.dll" })
+            fixture.Write("game/" + name, "old " + name);
+
+        Equal(fixture.Path("game/MetaHook.exe"), MetahookSetup.Install(source, game, "cstrike"));
+        foreach (var name in new[] { "SDL2.dll", "SDL3.dll" })
+            Equal(FileHash(System.IO.Path.Combine(source, name)), FileHash(fixture.Path("game/" + name)));
+    }),
+    ("Setup preserves SDL runtimes when a normal engine does not import SDL2", fixture =>
+    {
+        var source = fixture.Payload();
+        var game = fixture.Game("cstrike");
+        fixture.EngineWithImports(false, "KERNEL32.dll", "USER32.dll");
+        var sdl2 = fixture.Write("game/SDL2.dll", "old SDL2");
+        var sdl3 = fixture.Write("game/SDL3.dll", "old SDL3");
+        var expectedSdl2 = FileHash(sdl2);
+        var expectedSdl3 = FileHash(sdl3);
+
+        MetahookSetup.Install(source, game, "cstrike");
+        Equal(expectedSdl2, FileHash(sdl2));
+        Equal(expectedSdl3, FileHash(sdl3));
+    }),
+    ("Counter-Strike CLI installation replaces SDL runtimes with payload hashes", fixture =>
+    {
+        var source = fixture.Payload();
+        var game = fixture.Game("cstrike");
+        fixture.EngineWithImports(false, "KERNEL32.dll", "USER32.dll", "SDL2.dll");
+        fixture.CopyCli();
+        foreach (var name in new[] { "SDL2.dll", "SDL3.dll" })
+            fixture.Write("game/" + name, "old " + name);
+
+        var install = fixture.RunCli("-appid", "10", "-gamedir", game);
+        Equal("", install.Error);
+        Equal(0, install.ExitCode);
+        foreach (var name in new[] { "SDL2.dll", "SDL3.dll" })
+            Equal(FileHash(System.IO.Path.Combine(source, name)), FileHash(fixture.Path("game/" + name)));
+    }),
     ("An existing plugin list retains its timestamp during an upgrade", fixture =>
     {
         var source = fixture.Payload();
@@ -496,16 +566,21 @@ foreach (var test in cases)
 if (args.Length == 2 && args[0] == "--payload")
 {
     var source = System.IO.Path.GetFullPath(args[1]);
-    foreach (var mod in new[] { "svencoop", "valve" })
+    foreach (var mod in new[] { "svencoop", "valve", "cstrike" })
     {
         using var fixture = new Fixture();
         var game = fixture.Game(mod);
+        fixture.EngineWithImports(false, "KERNEL32.dll", "USER32.dll", "SDL2.dll");
+        foreach (var name in new[] { "SDL2.dll", "SDL3.dll" })
+            fixture.Write("game/" + name, "old " + name);
         // Default aggregate packages leave Steam API to the game. Older/custom
         // packages may still supply it, in which case normal DLL copying applies.
         var hostSteamApi = fixture.Write("game/steam_api.dll", "host Steam API");
         var payloadSteamApi = System.IO.Path.Combine(source, "steam_api.dll");
         var expectedSteamApi = File.ReadAllBytes(File.Exists(payloadSteamApi) ? payloadSteamApi : hostSteamApi);
-        var launcher = InstallPayload.Install(source, game, mod, true, true);
+        var launcher = MetahookSetup.Install(source, game, mod);
+        foreach (var name in new[] { "SDL2.dll", "SDL3.dll" })
+            Equal(FileHash(System.IO.Path.Combine(source, name)), FileHash(fixture.Path("game/" + name)));
         Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(System.IO.Path.Combine(source, "MetaHook.exe")))),
             Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(launcher))));
         Exists(fixture.Path($"game/{mod}/metahook/plugins/BetterSpray.dll"));
@@ -528,6 +603,7 @@ static void Equal<T>(T expected, T actual)
     if (!EqualityComparer<T>.Default.Equals(expected, actual))
         throw new Exception($"Expected {expected}; actual {actual}");
 }
+static string FileHash(string path) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
 static void Exists(string path)
 {
     if (!File.Exists(path)) throw new Exception($"Missing file: {path}");
@@ -600,6 +676,64 @@ sealed class Fixture : IDisposable
         bytes[64] = (byte)'P';
         bytes[65] = (byte)'E';
         File.WriteAllBytes(Path("game/hw.dll"), bytes);
+    }
+    public string EngineWithImports(bool is64Bit, params string[] modules)
+    {
+        // Keep RVAs distinct from disk offsets, and names in a different section
+        // from descriptors, so import detection must actually walk the section table.
+        const int peOffset = 0x80;
+        const int coffHeaderSize = 20;
+        const int sectionHeaderSize = 40;
+        const int sectionRawSize = 0x200;
+        const int importRawOffset = 0x400;
+        const uint importRva = 0x3000;
+        const int namesRawOffset = 0x600;
+        const uint namesRva = 0x5000;
+        const int importDescriptorSize = 20;
+        var optionalSize = is64Bit ? 240 : 224;
+        using var stream = new MemoryStream(new byte[namesRawOffset + sectionRawSize]);
+        using var writer = new BinaryWriter(stream);
+        writer.Write((ushort)0x5A4D);
+        stream.Position = 0x3C;
+        writer.Write(peOffset);
+        stream.Position = peOffset;
+        writer.Write(0x00004550);
+        writer.Write((ushort)(is64Bit ? 0x8664 : 0x14C));
+        writer.Write((ushort)2); // NumberOfSections
+        stream.Position = peOffset + 4 + 16;
+        writer.Write((ushort)optionalSize);
+        var optionalStart = peOffset + 4 + coffHeaderSize;
+        stream.Position = optionalStart;
+        writer.Write((ushort)(is64Bit ? 0x20B : 0x10B));
+        stream.Position = optionalStart + (is64Bit ? 108 : 92);
+        writer.Write(16); // NumberOfRvaAndSizes
+        stream.Position = optionalStart + (is64Bit ? 120 : 104);
+        writer.Write(modules.Length == 0 ? 0u : importRva);
+        writer.Write(modules.Length == 0 ? 0 : (modules.Length + 1) * importDescriptorSize);
+        var sectionStart = optionalStart + optionalSize;
+        foreach (var (index, rva, rawOffset) in new[] { (0, importRva, importRawOffset), (1, namesRva, namesRawOffset) })
+        {
+            stream.Position = sectionStart + index * sectionHeaderSize + 8;
+            writer.Write(sectionRawSize); // VirtualSize
+            writer.Write(rva);
+            writer.Write(sectionRawSize);
+            writer.Write(rawOffset);
+        }
+        var nameOffset = 0;
+        for (var i = 0; i < modules.Length; i++)
+        {
+            stream.Position = importRawOffset + i * importDescriptorSize + 12;
+            writer.Write(namesRva + (uint)nameOffset);
+            writer.Write(importRva + 0x100u + (uint)(i * (is64Bit ? 8 : 4))); // FirstThunk; OriginalFirstThunk is zero.
+            stream.Position = namesRawOffset + nameOffset;
+            var name = System.Text.Encoding.ASCII.GetBytes(modules[i]);
+            writer.Write(name);
+            writer.Write((byte)0);
+            nameOffset += name.Length + 1;
+        }
+        var path = Path("game/hw.dll");
+        File.WriteAllBytes(path, stream.ToArray());
+        return path;
     }
     public string Payload(bool normal = true, bool blob = true)
     {
