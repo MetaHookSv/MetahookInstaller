@@ -18,7 +18,7 @@ public sealed record CommandLineOptions(
 {
     public const string Usage =
         "Usage: MetahookInstallerCLI -appid <appid> [-gamedir <gamedir>] [-moddir <moddir>] [-source <dir>] [-plugins-only] [-uninstall | -describe-target | -include-debug-symbols]\n" +
-        "  -appid <appid>      Steam app ID of the game, e.g. 225840 (Sven Co-op) or 70 (Half-Life).\n" +
+        "  -appid <appid>      Steam app ID of the game, e.g. 225840 (Sven Co-op), 70 (Half-Life), or 3825360 (Zombie Panic!).\n" +
         "  -gamedir <gamedir>  Game root directory. Defaults to the Steam install directory of the app.\n" +
         "  -moddir <moddir>    Mod directory under the game root. Defaults to the app's base mod.\n" +
         "  -source <dir>       Payload directory to deploy (defaults to install/output next to this executable).\n" +

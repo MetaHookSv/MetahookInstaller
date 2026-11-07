@@ -1,6 +1,6 @@
 # MetahookInstaller
 
-Windows installer and plugin list editor for [MetaHookSv](https://github.com/MetaHookSv/MetaHookSv), built with Avalonia and ReactiveUI on .NET 8.
+Windows installer and plugin list editor for [MetaHookSv](https://github.com/MetaHookSv/MetaHookSv), built with Avalonia and ReactiveUI on .NET 10.
 
 ## Features
 
@@ -48,6 +48,8 @@ Set-Location path\to\MetahookInstaller-Output
 
 Select a game, or specify a custom game root and mod directory, then click **Install**. The **Editor** tab manages an installed game's plugin list.
 
+Steam installations of **Zombie Panic!** (App ID `3825360`, mod directory `zp`) are discovered automatically and appear in the game selector.
+
 Release builds resolve `install/output/` from the executable's directory, independently of the working directory. Debug builds also search its ancestors. Language (`lang`), theme (`theme`) and generated launch shortcuts are stored in the current working directory.
 
 The installer maps common `svencoop/` resources to the selected mod, selects the normal or blob launcher, and installs root runtime DLLs such as libcurl and Steam API. SDL2/SDL3 are replaced only for normal engines that import SDL2. Existing user plugin lists are retained; root tools and debug symbols are not copied to the game.
@@ -61,6 +63,10 @@ Installation overwrites matching root runtime DLLs. Uninstall removes MetaHook l
 ```powershell
 # Install into the Steam copy of Sven Co-op
 .\MetahookInstallerCLI.exe -appid 225840
+# Install into the Steam copy of Zombie Panic! (defaults to mod directory zp)
+.\MetahookInstallerCLI.exe -appid 3825360
+# Query Zombie Panic! without installing or requiring a payload
+.\MetahookInstallerCLI.exe -appid 3825360 -describe-target
 # Install into a mod of a specific Half-Life directory
 .\MetahookInstallerCLI.exe -appid 70 -gamedir "D:\Games\Half-Life" -moddir gearbox
 # Uninstall
@@ -71,7 +77,7 @@ Arguments (case-insensitive):
 
 - `-appid <appid>`: required Steam app ID of the game.
 - `-gamedir <gamedir>`: optional game root directory. Defaults to the app's Steam install directory.
-- `-moddir <moddir>`: optional mod directory under the game root. Defaults to the app's base mod in the supported games list, for example `svencoop` for 225840 and `valve` for 70; required for other app IDs.
+- `-moddir <moddir>`: optional mod directory under the game root. Defaults to the app's base mod in the supported games list, for example `svencoop` for 225840, `valve` for 70 and `zp` for 3825360; required for other app IDs.
 - `-uninstall`: remove MetaHook instead of installing it.
 - `-describe-target`: validate and describe the game without requiring a payload, copying files or creating a shortcut. Prints one JSON object with `GameDirectory` (absolute path), `ModDirectory` and `LauncherPath`. Assumes a complete payload containing both launchers; ordinary installation still falls back to the blob launcher when the normal payload launcher is absent.
 - `-include-debug-symbols`: also copy root `.pdb` files when installing, retaining their names even when `MetaHook.exe` is renamed to `svencoop.exe`. Normal installations continue to omit root symbols.
@@ -98,7 +104,7 @@ Both installation and uninstallation require `<gamedir>/<moddir>/liblist.gam`, s
 
 ## Build
 
-Use Windows x64 with the .NET 8 SDK. NativeAOT publishing also requires the Visual Studio 2022 **Desktop development with C++** workload and a Windows SDK.
+Use Windows x64 with the .NET 10 SDK (`global.json` selects the latest compatible .NET 10 feature band). NativeAOT publishing also requires the Visual Studio 2022 **Desktop development with C++** workload and a Windows SDK.
 
 From the repository root:
 

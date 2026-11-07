@@ -3,6 +3,73 @@ using MetahookInstaller.CLI;
 
 var cases = new (string Name, Action<Fixture> Run)[]
 {
+    ("Zombie Panic resolves its default mod from Steam or an explicit game directory", fixture =>
+    {
+        var game = fixture.Game("zp");
+        Equal(new GameInfo("Zombie Panic!", "zp", 3825360), KnownGames.Find(3825360));
+        Equal(new GameInfo("Zombie Panic!", "zp", 3825360), KnownGames.Find(3825360, "ZP"));
+        Equal(new InstallTarget("Zombie Panic!", game, "zp"),
+            CommandLineOptions.Parse(["-appid", "3825360"]).ResolveTarget(appId =>
+            {
+                Equal(3825360u, appId);
+                return game;
+            }));
+        Equal(new InstallTarget("Zombie Panic!", game, "zp"),
+            CommandLineOptions.Parse(["-appid", "3825360", "-gamedir", game]).ResolveTarget(
+                _ => throw new Exception("Steam must not be queried when -gamedir is given")));
+        Throws<ArgumentException>(() => CommandLineOptions.Parse(["-appid", "3825360"]).ResolveTarget(_ => null));
+    }),
+    ("Zombie Panic CLI queries, installs, updates plugins and uninstalls without a mod override", fixture =>
+    {
+        var game = fixture.Game("zp");
+        fixture.NormalEngine();
+        fixture.CopyCli();
+        var before = fixture.Snapshot();
+        var query = fixture.RunCli("-appid", "3825360", "-gamedir", game, "-describe-target");
+        Equal("", query.Error);
+        Equal(0, query.ExitCode);
+        using var json = System.Text.Json.JsonDocument.Parse(query.Output);
+        Equal(game, json.RootElement.GetProperty("GameDirectory").GetString());
+        Equal("zp", json.RootElement.GetProperty("ModDirectory").GetString());
+        Equal(fixture.Path("game/MetaHook.exe"), json.RootElement.GetProperty("LauncherPath").GetString());
+        Equal(before, fixture.Snapshot());
+
+        fixture.Payload();
+        fixture.Write("package/install/output/svencoop/metahook/configs/plugins_goldsrc.lst", "GoldSrc plugins");
+        fixture.Write("package/install/output/svencoop/metahook/gamedata/renderer/zp-10210.json", "ZP gamedata");
+        var install = fixture.RunCli("-appid", "3825360", "-gamedir", game);
+        Equal("", install.Error);
+        Equal(0, install.ExitCode);
+        Equal("normal", File.ReadAllText(fixture.Path("game/MetaHook.exe")));
+        Equal("GoldSrc plugins", File.ReadAllText(fixture.Path("game/zp/metahook/configs/plugins.lst")));
+        Equal("ZP gamedata", File.ReadAllText(fixture.Path("game/zp/metahook/gamedata/renderer/zp-10210.json")));
+        Exists(fixture.Path("working/MetaHook for Zombie Panic!.lnk"));
+        Absent(fixture.Path("game/svencoop"));
+
+        fixture.Write("game/zp/metahook/configs/plugins.lst", "user plugins");
+        fixture.Write("game/zp/metahook/plugins/Plugin.dll", "old plugin");
+        var launcherHash = FileHash(fixture.Path("game/MetaHook.exe"));
+        var update = fixture.RunCli("-appid", "3825360", "-gamedir", game, "-plugins-only");
+        Equal("", update.Error);
+        Equal(0, update.ExitCode);
+        Equal("plugin", File.ReadAllText(fixture.Path("game/zp/metahook/plugins/Plugin.dll")));
+        Equal("user plugins", File.ReadAllText(fixture.Path("game/zp/metahook/configs/plugins.lst")));
+        Equal(launcherHash, FileHash(fixture.Path("game/MetaHook.exe")));
+
+        var reinstall = fixture.RunCli("-appid", "3825360", "-gamedir", game);
+        Equal("", reinstall.Error);
+        Equal(0, reinstall.ExitCode);
+        Equal("user plugins", File.ReadAllText(fixture.Path("game/zp/metahook/configs/plugins.lst")));
+
+        var uninstall = fixture.RunCli("-appid", "3825360", "-gamedir", game, "-uninstall");
+        Equal("", uninstall.Error);
+        Equal(0, uninstall.ExitCode);
+        Absent(fixture.Path("game/MetaHook.exe"));
+        Absent(fixture.Path("game/zp/metahook"));
+        Absent(fixture.Path("working/MetaHook for Zombie Panic!.lnk"));
+        Exists(fixture.Path("game/zp/liblist.gam"));
+        Exists(fixture.Path("game/hw.dll"));
+    }),
     ("Plugin payload discovery does not require or accept only a launcher", fixture =>
     {
         var source = fixture.Payload(normal: false, blob: false);
@@ -566,7 +633,7 @@ foreach (var test in cases)
 if (args.Length == 2 && args[0] == "--payload")
 {
     var source = System.IO.Path.GetFullPath(args[1]);
-    foreach (var mod in new[] { "svencoop", "valve", "cstrike" })
+    foreach (var mod in new[] { "svencoop", "valve", "cstrike", "zp" })
     {
         using var fixture = new Fixture();
         var game = fixture.Game(mod);
@@ -586,11 +653,15 @@ if (args.Length == 2 && args[0] == "--payload")
         Exists(fixture.Path($"game/{mod}/metahook/plugins/BetterSpray.dll"));
         Exists(fixture.Path($"game/{mod}/metahook/gamedata/betterspray/index.json"));
         Exists(fixture.Path($"game/{mod}/metahook/configs/plugins.lst"));
-        var payloadLibcurl = System.IO.Path.Combine(source, "svencoop/metahook/dlls/libcurl.dll");
-        var installedLibcurl = fixture.Path($"game/{mod}/metahook/dlls/libcurl.dll");
-        Exists(installedLibcurl);
-        Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(payloadLibcurl))),
-            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(installedLibcurl))));
+        // Debug builds ship libcurl-d.dll; Release builds ship libcurl.dll.
+        var payloadLibcurls = System.IO.Directory.GetFiles(System.IO.Path.Combine(source, "svencoop/metahook/dlls"), "libcurl*.dll");
+        Equal(true, payloadLibcurls.Length > 0);
+        foreach (var payloadLibcurl in payloadLibcurls)
+        {
+            var installedLibcurl = fixture.Path($"game/{mod}/metahook/dlls/{System.IO.Path.GetFileName(payloadLibcurl)}");
+            Exists(installedLibcurl);
+            Equal(FileHash(payloadLibcurl), FileHash(installedLibcurl));
+        }
         Equal(Convert.ToHexString(expectedSteamApi), Convert.ToHexString(File.ReadAllBytes(hostSteamApi)));
         Console.WriteLine($"PASS: installed the actual CMake payload into a simulated {mod} game");
     }
