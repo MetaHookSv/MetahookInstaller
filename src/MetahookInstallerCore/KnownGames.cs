@@ -11,6 +11,7 @@ public static class KnownGames
     public static IReadOnlyList<GameInfo> All { get; } =
     [
         new("Sven Co-op", "svencoop", 225840),
+        new("Zombie Panic!", "zp", 3825360),
         new("Half-Life", "valve", 70),
         new("Half-Life Updated", "halflife_updated", 70),
         new("Half-Life Opposing Force", "gearbox", 50),
